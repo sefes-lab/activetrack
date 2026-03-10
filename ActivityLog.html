@@ -1,0 +1,1818 @@
+<!--
+ActiveTrack v0.44
+Date: March 10, 2026
+Creator: sefes
+
+Automated time and activity logger. Asks what you're up to at regular intervals.
+
+Version History:
+- v0.27: Mobile-responsive design, Light/Dark mode toggle
+- v0.28: Added "Ticket" quick option, collapsible sidebar, fixed mobile layout issues
+- v0.29: Changed toggle to vertical arrows, fixed duplicate button, light grey toggle color, 
+         adjusted toggle position, compact time displays on same line
+- v0.30: Removed current time display, countdown in styled pillbox
+- v0.31: Code optimizations (efficient sidebar updates, debounced saves, input validation),
+         UX improvements (paused state visual, keyboard shortcuts P/ESC, countdown warning colors,
+         editable quick-fill options, soft delete with undo)
+- v0.32: Fixed settings panel sizing (compact inputs, resizable textarea with constraints)
+- v0.33: Fixed button positioning in settings panel (clear: both prevents line wrapping)
+- v0.34: Updated Quick Fill defaults (Break-Fix full text, Ticket with colon/space, added Projects)
+- v0.35: Rebranded to ActiveTrack, added intro description
+- v0.36: Quick wins (keyboard shortcut hints, fixed inline styles, initial countdown display,
+         improved CSV filename format, save indicator, fixed z-index)
+- v0.37: Added beep notification toggle in settings
+- v0.38: Daily log rotation at midnight or on reactivation, with save prompt
+- v0.39: Inline edit/delete per entry, manual Add Entry form in sidebar
+- v0.40: Converted to Progressive Web App (PWA) with offline support
+- v0.41: Export/Import JSON for transferring logs between devices and browsers
+- v0.42: Import dialog with radio buttons for merge/replace selection
+- v0.43: UI design overhaul - monochrome button hierarchy (primary/secondary/danger/tertiary),
+         consistent icon+tooltip system, settings/dialog/form buttons updated
+- v0.44: Replaced native alert/confirm dialogs with custom styled modals (removes file:// title)
+
+Features:
+- localStorage persistence
+- Configurable settings (interval, timeout, quick-fill options)
+- Better UX and error handling
+- Improved accessibility
+- Mobile-responsive design
+- Light/Dark mode toggle
+- Collapsible sidebar
+- Keyboard shortcuts
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ActiveTrack">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>ActiveTrack</title>
+<style>
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.dark-mode .sidebar {
+    background-color: #2d2d2d;
+    border-left-color: #444;
+}
+
+body.dark-mode .dialog {
+    background-color: #2d2d2d;
+    border-color: #4CAF50;
+    color: #e0e0e0;
+}
+
+body.dark-mode .settings-panel {
+    background-color: #2d2d2d;
+    border-color: #2196F3;
+    color: #e0e0e0;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+    background-color: #3d3d3d;
+    color: #e0e0e0;
+    border-color: #555;
+}
+
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td {
+    border-color: #444;
+}
+
+body.dark-mode th {
+    background-color: #3d3d3d;
+}
+
+body.dark-mode .log-stats {
+    background-color: #2d4a2d;
+    color: #a5d6a7;
+}
+
+.content {
+    flex: 1;
+    padding: 20px;
+    max-width: calc(100% - 320px);
+}
+
+.intro-text {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.intro-countdown-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.keyboard-hints {
+    font-size: 12px;
+    color: #888;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+.save-indicator {
+    font-size: 11px;
+    color: #4CAF50;
+    margin-left: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.save-indicator.visible {
+    opacity: 1;
+}
+
+body.dark-mode .intro-text {
+    color: #aaa;
+}
+
+body.dark-mode .keyboard-hints {
+    color: #777;
+}
+
+body.dark-mode .save-indicator {
+    color: #81c784;
+}
+
+@media (max-width: 768px) {
+    .intro-text {
+        font-size: 12px;
+    }
+}
+
+.sidebar {
+    width: 300px;
+    background-color: #f0f0f0;
+    padding: 20px;
+    border-left: 2px solid #ccc;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+    transform: translateX(100%);
+}
+
+.sidebar-toggle {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 0;
+    background-color: #d3d3d3;
+    color: white;
+    border: none;
+    padding: 5px 8px;
+    cursor: pointer;
+    border-radius: 4px 0 0 4px;
+    z-index: 999;
+    transition: right 0.3s ease;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.sidebar-toggle.sidebar-collapsed {
+    right: 0;
+}
+
+.sidebar-toggle.sidebar-visible {
+    right: 310px;
+}
+
+.sidebar-toggle:hover {
+    background-color: #b0b0b0;
+}
+
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        position: fixed;
+        top: auto;
+        bottom: 10px;
+        right: 10px;
+        transform: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-size: 14px;
+        z-index: 1001;
+    }
+    
+    .sidebar-toggle.sidebar-collapsed,
+    .sidebar-toggle.sidebar-visible {
+        right: 10px;
+    }
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .content {
+        max-width: 100%;
+        padding: 15px;
+    }
+    
+    .sidebar {
+        position: relative;
+        width: 100%;
+        border-left: none;
+        border-top: 2px solid #ccc;
+        padding: 15px;
+        transform: none;
+    }
+    
+    .sidebar.collapsed {
+        display: none;
+    }
+}
+
+.countdown {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    display: inline-block;
+    background-color: #e8f5e9;
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 1px solid #4CAF50;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.countdown.paused {
+    background-color: #fff9c4;
+    border-color: #fbc02d;
+}
+
+.countdown.warning {
+    animation: flash-red 0.5s infinite;
+}
+
+@keyframes flash-red {
+    0%, 100% { background-color: #ffebee; border-color: #f44336; }
+    50% { background-color: #ffcdd2; border-color: #e53935; }
+}
+
+body.dark-mode .countdown {
+    background-color: #2d4a2d;
+    border-color: #4CAF50;
+    color: #a5d6a7;
+}
+
+body.dark-mode .countdown.paused {
+    background-color: #4a4a2d;
+    border-color: #fbc02d;
+    color: #fff59d;
+}
+
+body.dark-mode .countdown.warning {
+    animation: flash-red-dark 0.5s infinite;
+}
+
+@keyframes flash-red-dark {
+    0%, 100% { background-color: #4a2d2d; border-color: #f44336; color: #ef9a9a; }
+    50% { background-color: #5a3d3d; border-color: #e53935; color: #ffcdd2; }
+}
+
+@media (max-width: 768px) {
+    .countdown {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+}
+
+.question-container {
+    margin-bottom: 20px;
+}
+
+/* Dialog styling */
+.dialog {
+    background: white;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-width: 500px;
+}
+
+@media (max-width: 768px) {
+    .dialog {
+        padding: 15px;
+        max-width: 100%;
+    }
+}
+
+.dialog label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.dialog input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+    min-height: 44px;
+}
+
+.dialog select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    min-height: 44px;
+}
+
+@media (max-width: 768px) {
+    .dialog input[type="text"],
+    .dialog select {
+        font-size: 16px;
+        padding: 12px;
+    }
+}
+
+.dialog-countdown {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: #333;
+}
+
+.dialog-countdown.warning {
+    color: #f44336;
+}
+
+.last-answer {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    th, td {
+        padding: 6px;
+        font-size: 11px;
+    }
+    
+    table {
+        font-size: 11px;
+    }
+}
+
+th {
+    background-color: #e0e0e0;
+}
+
+.action-icons {
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.action-icons span {
+    cursor: pointer;
+    margin: 0 2px;
+    opacity: 0.6;
+}
+
+.action-icons span:hover {
+    opacity: 1;
+}
+
+.add-entry-form {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.add-entry-form.visible {
+    display: block;
+}
+
+.add-entry-form input,
+.add-entry-form select {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.add-entry-form button {
+    padding: 6px 12px;
+    font-size: 14px;
+    min-height: auto;
+    margin-right: 5px;
+}
+
+.add-btn {
+    font-size: 16px;
+    font-weight: bold;
+    padding: 5px 10px;
+    min-height: auto;
+}
+
+body.dark-mode .add-entry-form {
+    background-color: #2d2d2d;
+    border-color: #555;
+}
+
+.edit-input {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #4CAF50;
+    border-radius: 3px;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    min-height: 36px;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+/* Button hierarchy */
+.btn-primary {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #4CAF50;
+    border: 1.5px solid #4CAF50;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(76, 175, 80, 0.08);
+}
+
+.btn-tertiary {
+    background-color: transparent;
+    color: #666;
+    border: none;
+    padding: 8px 12px;
+}
+
+.btn-tertiary:hover {
+    color: #333;
+    background-color: rgba(0,0,0,0.05);
+}
+
+.btn-danger {
+    background-color: transparent;
+    color: #e53935;
+    border: 1.5px solid #e53935;
+}
+
+.btn-danger:hover {
+    background-color: rgba(229, 57, 53, 0.08);
+}
+
+/* Dark mode button overrides */
+body.dark-mode .btn-secondary {
+    color: #81c784;
+    border-color: #81c784;
+}
+
+body.dark-mode .btn-secondary:hover {
+    background-color: rgba(129, 199, 132, 0.1);
+}
+
+body.dark-mode .btn-tertiary {
+    color: #aaa;
+}
+
+body.dark-mode .btn-tertiary:hover {
+    color: #e0e0e0;
+    background-color: rgba(255,255,255,0.05);
+}
+
+body.dark-mode .btn-danger {
+    color: #ef9a9a;
+    border-color: #ef9a9a;
+}
+
+body.dark-mode .btn-danger:hover {
+    background-color: rgba(239, 154, 154, 0.1);
+}
+
+@media (max-width: 768px) {
+    button {
+        width: auto;
+        margin-right: 5px;
+        padding: 10px 16px;
+        display: inline-block;
+    }
+}
+
+/* Icon-only buttons (no text label) */
+.btn-icon {
+    padding: 8px 12px;
+    font-size: 20px;
+    line-height: 1;
+    min-width: 40px;
+    text-align: center;
+}
+
+.sidebar .btn-icon {
+    padding: 5px 8px;
+    font-size: 14px;
+    min-width: auto;
+}
+
+/* Pause button active state */
+.pause-btn.paused {
+    color: #e53935;
+    border-color: #e53935;
+}
+
+.pause-btn.paused:hover {
+    background-color: rgba(229, 57, 53, 0.08);
+}
+
+body.dark-mode .pause-btn.paused {
+    color: #ef9a9a;
+    border-color: #ef9a9a;
+}
+
+body.dark-mode .pause-btn.paused:hover {
+    background-color: rgba(239, 154, 154, 0.1);
+}
+
+/* Settings panel */
+.settings-panel {
+    background: white;
+    border: 2px solid #2196F3;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: none;
+    max-width: 400px;
+}
+
+.settings-panel.visible {
+    display: block;
+}
+
+.settings-panel label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.settings-panel input[type="number"] {
+    width: 80px;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+    min-height: 44px;
+}
+
+.settings-panel textarea {
+    width: 100%;
+    max-width: 300px;
+    min-width: 150px;
+    min-height: 100px;
+    max-height: 200px;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    resize: both;
+    display: block;
+}
+
+.settings-panel button {
+    display: inline-block;
+    margin-top: 10px;
+    clear: both;
+}
+
+@media (max-width: 768px) {
+    .settings-panel input[type="number"] {
+        padding: 12px;
+    }
+    
+    .settings-panel textarea {
+        max-width: 100%;
+    }
+}
+
+.log-stats {
+    font-size: 14px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #e8f5e9;
+    border-radius: 4px;
+}
+
+.sidebar button {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: auto;
+    margin-right: 4px;
+    margin-bottom: 5px;
+}
+
+/* Undo banner */
+.undo-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 1100;
+    display: none;
+}
+
+/* Import dialog */
+.import-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+
+.import-dialog-box {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .import-dialog-box {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.import-dialog-box h3 {
+    margin-top: 0;
+}
+
+.import-dialog-box label {
+    display: block;
+    margin: 10px 0;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.import-dialog-box input[type="radio"] {
+    margin-right: 8px;
+}
+
+.import-dialog-box .import-actions {
+    margin-top: 15px;
+}
+
+.import-dialog-box .import-actions button {
+    min-height: auto;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.undo-banner.visible {
+    display: block;
+}
+
+.undo-banner button {
+    margin-left: 15px;
+    padding: 5px 15px;
+    min-height: auto;
+}
+
+.undo-banner button:hover {
+    opacity: 0.85;
+}
+
+/* Custom modal (replaces native alert/confirm) */
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1300;
+}
+
+.custom-modal-box {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .custom-modal-box {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.custom-modal-box h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.custom-modal-box p {
+    margin: 0 0 16px;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.custom-modal-actions button {
+    min-height: auto;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+/* Theme toggle switch */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.theme-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.theme-toggle label {
+    display: block;
+    width: 60px;
+    height: 30px;
+    background-color: #ccc;
+    border-radius: 15px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.theme-toggle label:after {
+    content: '☀️';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.theme-toggle input:checked + label {
+    background-color: #4CAF50;
+}
+
+.theme-toggle input:checked + label:after {
+    content: '🌙';
+    transform: translateX(30px);
+}
+
+@media (max-width: 768px) {
+    .theme-toggle {
+        top: 10px;
+        right: 10px;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- Theme toggle switch -->
+<div class="theme-toggle">
+    <input type="checkbox" id="theme-switch">
+    <label for="theme-switch" aria-label="Toggle dark mode"></label>
+</div>
+
+<!-- Sidebar toggle button -->
+<button class="sidebar-toggle sidebar-visible" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+    ▼
+</button>
+
+<div class="content">
+    <!-- Intro and countdown -->
+    <div class="intro-countdown-wrapper">
+        <div class="countdown" id="countdown"></div>
+        <div class="intro-text">Automated time and activity logger. Asks what you're up to at regular intervals.</div>
+    </div>
+    
+    <!-- Settings panel -->
+    <div class="settings-panel" id="settings-panel">
+        <h3>Settings</h3>
+        <label for="interval-setting">Prompt Interval (minutes):</label>
+        <input type="number" id="interval-setting" min="1" max="60" value="6">
+        
+        <label for="timeout-setting">Dialog Timeout (seconds):</label>
+        <input type="number" id="timeout-setting" min="10" max="120" value="30">
+        
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+            <input type="checkbox" id="beep-setting" checked style="width: auto; min-height: auto;">
+            Enable beep notification
+        </label>
+        
+        <label for="quickfill-setting">Quick Fill Options (one per line):</label>
+        <textarea id="quickfill-setting" rows="6"></textarea>
+        
+        <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
+    </div>
+    
+    <!-- Question container -->
+    <div class="question-container" id="question-container"></div>
+    
+    <button id="pause-btn" class="btn-secondary btn-icon pause-btn" onclick="togglePause()" title="Pause timer (P)">⏸</button>
+    <button class="btn-secondary btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
+    <span class="save-indicator" id="save-indicator">✓ Saved</span>
+    
+    <div class="keyboard-hints">
+        Keyboard shortcuts: Press P to pause/unpause • Press ESC to cancel dialog
+    </div>
+</div>
+
+<div id="sidebar" class="sidebar"></div>
+
+<!-- Undo banner -->
+<div class="undo-banner" id="undo-banner">
+    <span id="undo-message"></span>
+    <button onclick="undoDelete()">Undo</button>
+</div>
+
+<script>
+// Configuration with defaults
+let config = {
+    intervalMinutes: 6,
+    timeoutSeconds: 30,
+    darkMode: false,
+    sidebarCollapsed: false,
+    beepEnabled: true,
+    quickFillOptions: [
+        { label: 'Break-Fix', value: 'Break-Fix' },
+        { label: 'Support', value: 'Support' },
+        { label: 'Meeting', value: 'Meeting' },
+        { label: 'Ticket', value: 'Ticket: ' },
+        { label: 'Projects', value: 'Projects' }
+    ]
+};
+
+// Activity log data
+let activityLog = [];
+let lastAnswer = "";
+let countdownTime = config.intervalMinutes * 60;
+let isPaused = false;
+let countdownInterval;
+let isDialogOpen = false;
+let lastSidebarLength = 0; // Track sidebar entries for efficient updates
+let deletedLog = null; // For undo functionality
+let undoTimeout = null;
+let saveDebounceTimeout = null; // For debounced saves
+let midnightTimeout = null; // For midnight rotation check
+
+// Dialog state
+let dialogInterval = null;
+let dialogCountdown = 0;
+let dialogCountdownLabel = null;
+let dialogDialog = null;
+
+// Title bar animation
+let originalTitle = 'ActiveTrack';
+let invertInterval = null;
+
+// --- Custom modal dialogs (replaces native alert/confirm) ---
+function showModal(title, message, buttons) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.classList.add('custom-modal');
+        overlay.innerHTML = `
+            <div class="custom-modal-box">
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <div class="custom-modal-actions"></div>
+            </div>
+        `;
+        const actions = overlay.querySelector('.custom-modal-actions');
+        buttons.forEach(btn => {
+            const b = document.createElement('button');
+            b.textContent = btn.label;
+            b.className = btn.className || 'btn-secondary';
+            b.onclick = () => { overlay.remove(); resolve(btn.value); };
+            actions.appendChild(b);
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+function showAlert(title, message) {
+    return showModal(title, message, [
+        { label: 'OK', value: true, className: 'btn-secondary' }
+    ]);
+}
+
+function showConfirm(title, message, confirmLabel, cancelLabel) {
+    return showModal(title, message, [
+        { label: cancelLabel || 'Cancel', value: false, className: 'btn-tertiary' },
+        { label: confirmLabel || 'OK', value: true, className: 'btn-secondary' }
+    ]);
+}
+
+// --- localStorage functions with debouncing ---
+function saveToLocalStorage() {
+    // Debounce saves to avoid excessive writes
+    if (saveDebounceTimeout) clearTimeout(saveDebounceTimeout);
+    
+    saveDebounceTimeout = setTimeout(() => {
+        try {
+            localStorage.setItem('activityLog', JSON.stringify(activityLog));
+            localStorage.setItem('lastAnswer', lastAnswer);
+            localStorage.setItem('config', JSON.stringify(config));
+            showSaveIndicator();
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+        }
+    }, 500); // Wait 500ms before saving
+}
+
+function saveToLocalStorageImmediate() {
+    // For critical saves that shouldn't be debounced
+    if (saveDebounceTimeout) clearTimeout(saveDebounceTimeout);
+    try {
+        localStorage.setItem('activityLog', JSON.stringify(activityLog));
+        localStorage.setItem('lastAnswer', lastAnswer);
+        localStorage.setItem('config', JSON.stringify(config));
+        showSaveIndicator();
+    } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+    }
+}
+
+function showSaveIndicator() {
+    const indicator = document.getElementById('save-indicator');
+    indicator.classList.add('visible');
+    setTimeout(() => {
+        indicator.classList.remove('visible');
+    }, 2000);
+}
+
+// --- Daily log rotation ---
+function getTodayString() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function checkDayRotation() {
+    const today = getTodayString();
+    const lastDate = localStorage.getItem('lastActiveDate');
+    
+    if (lastDate && lastDate !== today && activityLog.length > 0) {
+        // Day has changed and there are entries from previous day
+        promptDayRotation(lastDate);
+    } else {
+        localStorage.setItem('lastActiveDate', today);
+    }
+}
+
+function promptDayRotation(previousDate) {
+    const entryCount = activityLog.length;
+    const message = `You have ${entryCount} entries from ${previousDate}.\n\nSave yesterday's log before starting fresh?`;
+    
+    showConfirm('New Day', message, 'Save & Clear', 'Just Clear').then(save => {
+        if (save) {
+            try {
+                const parts = previousDate.split('-');
+                const filename = `ActiveTrack-${parts[0]}-${parts[1]}-${parts[2]}.csv`;
+                const blob = new Blob([getCSVContent()], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.setAttribute('href', URL.createObjectURL(blob));
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                showAlert('Error', 'Failed to download CSV: ' + e.message);
+            }
+        }
+        
+        activityLog = [];
+        lastAnswer = '';
+        lastSidebarLength = 0;
+        updateSidebar();
+        localStorage.setItem('lastActiveDate', getTodayString());
+        saveToLocalStorageImmediate();
+    });
+}
+
+function scheduleMidnightCheck() {
+    // Calculate ms until midnight
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const msUntilMidnight = midnight - now;
+    
+    if (midnightTimeout) clearTimeout(midnightTimeout);
+    
+    midnightTimeout = setTimeout(() => {
+        checkDayRotation();
+        scheduleMidnightCheck(); // Schedule next check
+    }, msUntilMidnight + 1000); // +1s buffer past midnight
+}
+
+function loadFromLocalStorage() {
+    try {
+        const savedLog = localStorage.getItem('activityLog');
+        const savedAnswer = localStorage.getItem('lastAnswer');
+        const savedConfig = localStorage.getItem('config');
+        
+        if (savedLog) activityLog = JSON.parse(savedLog);
+        if (savedAnswer) lastAnswer = savedAnswer;
+        if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            // Merge with defaults to handle new config properties
+            config = { ...config, ...parsed };
+            countdownTime = config.intervalMinutes * 60;
+        }
+        
+        // Apply dark mode if saved
+        if (config.darkMode) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('theme-switch').checked = true;
+        }
+        
+        // Apply sidebar state if saved
+        if (config.sidebarCollapsed) {
+            document.getElementById('sidebar').classList.add('collapsed');
+            const toggleBtn = document.getElementById('sidebar-toggle');
+            toggleBtn.textContent = '▲';
+            toggleBtn.classList.remove('sidebar-visible');
+            toggleBtn.classList.add('sidebar-collapsed');
+        }
+    } catch (e) {
+        console.error('Failed to load from localStorage:', e);
+    }
+}
+
+// --- Play beep sound with error handling ---
+function playBeep() {
+    if (!config.beepEnabled) return;
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (e) {
+        console.warn('Audio playback failed:', e);
+    }
+}
+
+// --- Update countdown to next dialog ---
+function updateCountdown() {
+    if (isPaused) return;
+    
+    const minutes = Math.floor(countdownTime / 60);
+    const seconds = countdownTime % 60;
+    const countdownEl = document.getElementById("countdown");
+    countdownEl.textContent = `Next dialog: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    
+    // Add warning class if under 1 minute
+    if (countdownTime < 60 && countdownTime > 0) {
+        countdownEl.classList.add('warning');
+    } else {
+        countdownEl.classList.remove('warning');
+    }
+    
+    countdownTime--;
+    
+    if (countdownTime < 0) {
+        countdownTime = config.intervalMinutes * 60;
+        promptActivity();
+    }
+}
+
+// --- Update sidebar with activity log (optimized) ---
+function updateSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const totalEntries = activityLog.length;
+    
+    // Always do full rebuild to include action icons
+    sidebar.innerHTML = `
+        <h2>Activity Log</h2>
+        <div class="log-stats">
+            <strong>Total Entries:</strong> ${totalEntries}
+        </div>
+        <button class="add-btn btn-secondary btn-icon" onclick="toggleAddForm()" title="Add a manual entry">+</button>
+        <div class="add-entry-form" id="add-entry-form">
+            <input type="date" id="add-date" value="${getTodayString()}">
+            <input type="time" id="add-time" step="1" value="${new Date().toTimeString().split(' ')[0]}">
+            <input type="text" id="add-response" placeholder="Activity description">
+            <select id="add-quickfill" onchange="if(this.value) document.getElementById('add-response').value = this.value;">
+                <option value="">-- Quick Fill --</option>
+                ${config.quickFillOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
+            </select>
+            <button class="btn-secondary" onclick="addManualEntry()">Save</button>
+            <button class="btn-tertiary" onclick="toggleAddForm()">Cancel</button>
+        </div>
+        <table id="activity-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Response</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="activity-tbody">
+                ${activityLog.map((entry, i) => `
+                    <tr id="row-${i}">
+                        <td>${entry.date}</td>
+                        <td>${entry.time}</td>
+                        <td id="resp-${i}">${entry.response}</td>
+                        <td class="action-icons">
+                            <span onclick="editEntry(${i})" title="Edit">✏️</span>
+                            <span onclick="deleteEntry(${i})" title="Delete">🗑️</span>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <button class="btn-secondary" onclick="downloadCSV()" title="Download log as CSV">📄 CSV</button>
+        <button class="btn-secondary" onclick="exportLog()" title="Export log as JSON">⬇ Export</button>
+        <button class="btn-secondary" onclick="importLog()" title="Import log from JSON">� Import</button>
+        <button class="btn-danger" onclick="clearLog()" title="Clear all log entries">🗑 Clear</button>
+    `;
+    lastSidebarLength = totalEntries;
+}
+
+// --- Prompt user for activity ---
+function promptActivity() {
+    if (isDialogOpen) return;
+    
+    playBeep();
+    invertTitleBar();
+    isDialogOpen = true;
+    
+    // Dialog setup
+    dialogDialog = document.createElement('div');
+    dialogDialog.classList.add('dialog');
+    dialogDialog.setAttribute('role', 'dialog');
+    dialogDialog.setAttribute('aria-labelledby', 'dialog-title');
+    
+    let lastAnswerLabel = document.createElement('div');
+    lastAnswerLabel.classList.add('last-answer');
+    lastAnswerLabel.textContent = `Last answer: ${lastAnswer || 'Nothing'}`;
+    
+    let label = document.createElement('label');
+    label.id = 'dialog-title';
+    label.textContent = 'What are you doing?';
+    
+    let input = document.createElement('input');
+    input.type = 'text';
+    input.value = lastAnswer;
+    input.setAttribute('aria-label', 'Activity description');
+    
+    // Quick-fill dropdown
+    let select = document.createElement('select');
+    select.setAttribute('aria-label', 'Quick fill options');
+    
+    let defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- Select Quick Fill --';
+    select.appendChild(defaultOption);
+    
+    config.quickFillOptions.forEach(opt => {
+        let option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        select.appendChild(option);
+    });
+    
+    select.onchange = () => {
+        if (select.value) input.value = select.value;
+    };
+    
+    let submit = document.createElement('button');
+    submit.textContent = 'Submit';
+    submit.classList.add('btn-secondary');
+    
+    dialogCountdownLabel = document.createElement('div');
+    dialogCountdownLabel.classList.add('dialog-countdown');
+    dialogCountdown = config.timeoutSeconds;
+    dialogCountdownLabel.textContent = `Time left: ${dialogCountdown}s`;
+    
+    dialogDialog.appendChild(lastAnswerLabel);
+    dialogDialog.appendChild(label);
+    dialogDialog.appendChild(input);
+    dialogDialog.appendChild(select);
+    dialogDialog.appendChild(submit);
+    dialogDialog.appendChild(dialogCountdownLabel);
+    
+    document.getElementById('question-container').appendChild(dialogDialog);
+    
+    // Focus input for better UX
+    setTimeout(() => input.focus(), 100);
+    
+    // Dialog countdown interval
+    if (dialogInterval) clearInterval(dialogInterval);
+    dialogInterval = setInterval(() => {
+        if (!isPaused) {
+            dialogCountdown--;
+            dialogCountdownLabel.textContent = `Time left: ${dialogCountdown}s`;
+            
+            // Warning at 10 seconds
+            if (dialogCountdown === 10) {
+                dialogCountdownLabel.classList.add('warning');
+                playBeep();
+            }
+            
+            if (dialogCountdown <= 0) {
+                clearInterval(dialogInterval);
+                recordActivity(lastAnswer || 'Nothing');
+                closeDialog();
+            }
+        }
+    }, 1000);
+    
+    function submitResponse() {
+        clearInterval(dialogInterval);
+        const response = input.value.trim() || lastAnswer || 'Nothing';
+        recordActivity(response);
+        closeDialog();
+    }
+    
+    function closeDialog() {
+        if (dialogDialog && dialogDialog.parentNode) {
+            document.getElementById('question-container').removeChild(dialogDialog);
+        }
+        isDialogOpen = false;
+        restoreTitleBar();
+    }
+    
+    submit.onclick = submitResponse;
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            submitResponse();
+        } else if (e.key === 'Escape') {
+            clearInterval(dialogInterval);
+            closeDialog();
+        }
+    });
+}
+
+// --- Invert the color of the title bar for attention ---
+function invertTitleBar() {
+    let invertState = false;
+    let invertCount = 0;
+    
+    if (invertInterval) clearInterval(invertInterval);
+    
+    invertInterval = setInterval(() => {
+        document.title = invertState ? 'ACTIVETRACK' : originalTitle;
+        invertState = !invertState;
+        invertCount++;
+        
+        if (invertCount > 7) {
+            restoreTitleBar();
+        }
+    }, 500);
+}
+
+function restoreTitleBar() {
+    if (invertInterval) {
+        clearInterval(invertInterval);
+        invertInterval = null;
+    }
+    document.title = originalTitle;
+}
+
+// --- Record activity to log ---
+function recordActivity(response) {
+    const now = new Date();
+    activityLog.push({
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0],
+        response: response
+    });
+    lastAnswer = response;
+    updateSidebar();
+    saveToLocalStorage();
+}
+
+// --- Convert activity log to CSV ---
+function getCSVContent() {
+    let csv = 'Date,Time,Response\n';
+    activityLog.forEach(entry => {
+        csv += `${entry.date},${entry.time},"${entry.response.replace(/"/g, '""')}"\n`;
+    });
+    return csv;
+}
+
+// --- Download activity log as CSV ---
+function downloadCSV() {
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const filename = `ActiveTrack-${year}-${month}-${day}.csv`;
+        const blob = new Blob([getCSVContent()], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.setAttribute('href', URL.createObjectURL(blob));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (e) {
+        showAlert('Error', 'Failed to download CSV: ' + e.message);
+    }
+}
+
+// --- Export log as JSON ---
+function exportLog() {
+    try {
+        const data = {
+            version: '0.44',
+            exported: new Date().toISOString(),
+            config: config,
+            lastAnswer: lastAnswer,
+            activityLog: activityLog
+        };
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const filename = `ActiveTrack-${year}-${month}-${day}.json`;
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.setAttribute('href', URL.createObjectURL(blob));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (e) {
+        showAlert('Error', 'Failed to export: ' + e.message);
+    }
+}
+
+// --- Import log from JSON ---
+function importLog() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                
+                if (!data.activityLog || !Array.isArray(data.activityLog)) {
+                    showAlert('Import Error', 'Invalid file format. Expected an ActiveTrack export file.');
+                    return;
+                }
+                
+                showImportDialog(data);
+            } catch (err) {
+                showAlert('Import Error', 'Failed to import: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
+function showImportDialog(data) {
+    const overlay = document.createElement('div');
+    overlay.classList.add('import-dialog');
+    
+    overlay.innerHTML = `
+        <div class="import-dialog-box">
+            <h3>Import Log</h3>
+            <p>Found ${data.activityLog.length} entries from ${data.exported ? new Date(data.exported).toLocaleDateString() : 'unknown date'}.</p>
+            <label><input type="radio" name="import-mode" value="merge" checked> Merge with existing log</label>
+            <label><input type="radio" name="import-mode" value="replace"> Replace existing log</label>
+            <div class="import-actions">
+                <button class="btn-secondary" onclick="executeImport(this, 'confirm')">Import</button>
+                <button class="btn-tertiary" onclick="this.closest('.import-dialog').remove()">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    overlay.dataset.importData = JSON.stringify(data);
+    document.body.appendChild(overlay);
+}
+
+function executeImport(btn, action) {
+    const overlay = btn.closest('.import-dialog');
+    const data = JSON.parse(overlay.dataset.importData);
+    const mode = overlay.querySelector('input[name="import-mode"]:checked').value;
+    
+    if (mode === 'replace') {
+        activityLog = data.activityLog;
+        lastAnswer = data.lastAnswer || '';
+        if (data.config) {
+            config = { ...config, ...data.config };
+        }
+    } else {
+        // Merge and sort chronologically
+        activityLog = activityLog.concat(data.activityLog);
+        activityLog.sort((a, b) => {
+            const tA = a.date + 'T' + a.time;
+            const tB = b.date + 'T' + b.time;
+            return tA.localeCompare(tB);
+        });
+    }
+    
+    lastSidebarLength = 0;
+    updateSidebar();
+    saveToLocalStorageImmediate();
+    overlay.remove();
+    showAlert('Import Complete', `${activityLog.length} total entries.`);
+}
+
+// --- Edit entry inline ---
+function editEntry(index) {
+    const cell = document.getElementById(`resp-${index}`);
+    const currentValue = activityLog[index].response;
+    
+    cell.innerHTML = `<input class="edit-input" type="text" value="${currentValue.replace(/"/g, '&quot;')}" 
+        onkeydown="if(event.key==='Enter') saveEdit(${index}, this.value); if(event.key==='Escape') updateSidebar();">
+        <span onclick="saveEdit(${index}, this.previousElementSibling.value)" style="cursor:pointer;" title="Save">✅</span>
+        <span onclick="updateSidebar()" style="cursor:pointer;" title="Cancel">❌</span>`;
+    
+    cell.querySelector('input').focus();
+}
+
+function saveEdit(index, newValue) {
+    const trimmed = newValue.trim();
+    if (trimmed) {
+        activityLog[index].response = trimmed;
+        lastSidebarLength = 0;
+        updateSidebar();
+        saveToLocalStorage();
+    }
+}
+
+// --- Delete single entry ---
+function deleteEntry(index) {
+    const entry = activityLog[index];
+    showConfirm('Delete Entry', `Delete "${entry.response}" at ${entry.time}?`, 'Delete', 'Cancel').then(ok => {
+        if (ok) {
+            activityLog.splice(index, 1);
+            lastSidebarLength = 0;
+            updateSidebar();
+            saveToLocalStorage();
+        }
+    });
+}
+
+// --- Toggle add entry form ---
+function toggleAddForm() {
+    const form = document.getElementById('add-entry-form');
+    form.classList.toggle('visible');
+    
+    if (form.classList.contains('visible')) {
+        document.getElementById('add-date').value = getTodayString();
+        document.getElementById('add-time').value = new Date().toTimeString().split(' ')[0];
+        document.getElementById('add-response').value = '';
+        document.getElementById('add-quickfill').value = '';
+        document.getElementById('add-response').focus();
+    }
+}
+
+// --- Add manual entry (chronologically sorted) ---
+function addManualEntry() {
+    const date = document.getElementById('add-date').value;
+    const time = document.getElementById('add-time').value;
+    const response = document.getElementById('add-response').value.trim();
+    
+    if (!date || !time || !response) {
+        showAlert('Missing Fields', 'Please fill in all fields.');
+        return;
+    }
+    
+    const newEntry = { date: date, time: time, response: response };
+    const newTimestamp = date + 'T' + time;
+    
+    // Find correct insertion point
+    let insertIndex = activityLog.length;
+    for (let i = 0; i < activityLog.length; i++) {
+        const entryTimestamp = activityLog[i].date + 'T' + activityLog[i].time;
+        if (newTimestamp < entryTimestamp) {
+            insertIndex = i;
+            break;
+        }
+    }
+    
+    activityLog.splice(insertIndex, 0, newEntry);
+    lastSidebarLength = 0;
+    updateSidebar();
+    saveToLocalStorage();
+}
+
+// --- Clear log with soft delete and undo ---
+function clearLog() {
+    showConfirm('Clear Log', 'Clear all activity log entries?\nYou can undo within 10 seconds.', 'Clear', 'Cancel').then(ok => {
+        if (ok) {
+            deletedLog = [...activityLog];
+            activityLog = [];
+            lastAnswer = '';
+            lastSidebarLength = 0;
+            updateSidebar();
+            saveToLocalStorageImmediate();
+            
+            const banner = document.getElementById('undo-banner');
+            const message = document.getElementById('undo-message');
+            message.textContent = `Cleared ${deletedLog.length} entries.`;
+            banner.classList.add('visible');
+            
+            if (undoTimeout) clearTimeout(undoTimeout);
+            undoTimeout = setTimeout(() => {
+                banner.classList.remove('visible');
+                deletedLog = null;
+            }, 10000);
+        }
+    });
+}
+
+function undoDelete() {
+    if (deletedLog) {
+        activityLog = [...deletedLog];
+        deletedLog = null;
+        lastSidebarLength = 0;
+        updateSidebar();
+        saveToLocalStorageImmediate();
+        
+        // Hide banner
+        document.getElementById('undo-banner').classList.remove('visible');
+        if (undoTimeout) clearTimeout(undoTimeout);
+    }
+}
+
+// --- Toggle pause/unpause ---
+function togglePause() {
+    isPaused = !isPaused;
+    const pauseBtn = document.getElementById('pause-btn');
+    const countdownEl = document.getElementById('countdown');
+    
+    pauseBtn.textContent = isPaused ? '▶' : '⏸';
+    pauseBtn.title = isPaused ? 'Unpause timer (P)' : 'Pause timer (P)';
+    pauseBtn.classList.toggle('paused', isPaused);
+    
+    // Visual feedback for paused state
+    if (isPaused) {
+        countdownEl.classList.add('paused');
+        countdownEl.classList.remove('warning');
+        clearInterval(countdownInterval);
+    } else {
+        countdownEl.classList.remove('paused');
+        countdownInterval = setInterval(updateCountdown, 1000);
+        if (countdownTime <= 0) {
+            promptActivity();
+        }
+    }
+}
+
+// --- Settings panel ---
+function toggleSettings() {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('visible');
+    
+    if (panel.classList.contains('visible')) {
+        document.getElementById('interval-setting').value = config.intervalMinutes;
+        document.getElementById('timeout-setting').value = config.timeoutSeconds;
+        document.getElementById('beep-setting').checked = config.beepEnabled;
+        
+        // Populate quick-fill options
+        const quickFillText = config.quickFillOptions.map(opt => opt.value).join('\n');
+        document.getElementById('quickfill-setting').value = quickFillText;
+    }
+}
+
+function saveSettings() {
+    const intervalMinutes = parseInt(document.getElementById('interval-setting').value);
+    const timeoutSeconds = parseInt(document.getElementById('timeout-setting').value);
+    const quickFillText = document.getElementById('quickfill-setting').value;
+    
+    // Validate inputs
+    if (isNaN(intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 60) {
+        showAlert('Invalid Setting', 'Prompt interval must be between 1 and 60 minutes.');
+        return;
+    }
+    
+    if (isNaN(timeoutSeconds) || timeoutSeconds < 10 || timeoutSeconds > 120) {
+        showAlert('Invalid Setting', 'Dialog timeout must be between 10 and 120 seconds.');
+        return;
+    }
+    
+    // Update config
+    config.intervalMinutes = intervalMinutes;
+    config.timeoutSeconds = timeoutSeconds;
+    config.beepEnabled = document.getElementById('beep-setting').checked;
+    countdownTime = intervalMinutes * 60;
+    
+    // Parse quick-fill options
+    const lines = quickFillText.split('\n').filter(line => line.trim() !== '');
+    if (lines.length > 0) {
+        config.quickFillOptions = lines.map(line => ({
+            label: line.trim(),
+            value: line.trim()
+        }));
+    } else {
+        // Reset to defaults if empty
+        config.quickFillOptions = [
+            { label: 'Break-Fix', value: 'Break-Fix' },
+            { label: 'Support', value: 'Support' },
+            { label: 'Meeting', value: 'Meeting' },
+            { label: 'Ticket', value: 'Ticket: ' },
+            { label: 'Projects', value: 'Projects' }
+        ];
+    }
+    
+    saveToLocalStorageImmediate();
+    toggleSettings();
+    showAlert('Settings', 'Settings saved successfully.');
+}
+
+// --- Toggle sidebar visibility ---
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    
+    sidebar.classList.toggle('collapsed');
+    config.sidebarCollapsed = sidebar.classList.contains('collapsed');
+    
+    if (config.sidebarCollapsed) {
+        toggleBtn.textContent = '▲';
+        toggleBtn.classList.remove('sidebar-visible');
+        toggleBtn.classList.add('sidebar-collapsed');
+    } else {
+        toggleBtn.textContent = '▼';
+        toggleBtn.classList.remove('sidebar-collapsed');
+        toggleBtn.classList.add('sidebar-visible');
+    }
+    
+    saveToLocalStorage();
+}
+
+// --- Global keyboard shortcuts ---
+document.addEventListener('keydown', function(e) {
+    // P key to toggle pause (only when dialog is not open)
+    if (e.key === 'p' || e.key === 'P') {
+        if (!isDialogOpen) {
+            togglePause();
+        }
+    }
+});
+
+// --- Initialize sidebar and intervals ---
+function initializeApp() {
+    loadFromLocalStorage();
+    checkDayRotation(); // Check if day has changed since last use
+    updateSidebar();
+    updateCountdown(); // Initial display
+    countdownInterval = setInterval(updateCountdown, 1000);
+    scheduleMidnightCheck(); // Schedule midnight rotation
+    promptActivity();
+    
+    // Setup theme toggle listener
+    document.getElementById('theme-switch').addEventListener('change', function() {
+        config.darkMode = this.checked;
+        document.body.classList.toggle('dark-mode', this.checked);
+        saveToLocalStorage();
+    });
+    
+    // Check rotation on tab reactivation
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            checkDayRotation();
+        }
+    });
+}
+
+// --- Ensure DOM is ready before initializing ---
+window.addEventListener('DOMContentLoaded', initializeApp);
+
+// --- Register service worker for PWA ---
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service worker registered'))
+        .catch(err => console.warn('Service worker registration failed:', err));
+}
+
+// --- Cleanup on page unload ---
+window.addEventListener('beforeunload', () => {
+    if (invertInterval) clearInterval(invertInterval);
+    if (dialogInterval) clearInterval(dialogInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    if (midnightTimeout) clearTimeout(midnightTimeout);
+});
+</script>
+
+</body>
+</html>
