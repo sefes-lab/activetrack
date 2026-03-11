@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate ActiveTrack Icons</title></head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+<h2>ActiveTrack Icons</h2>
+<p>Right-click each icon and "Save Image As..."</p>
+
+<p>Save as <strong>icon-192.png</strong>:</p>
+<canvas id="c192" width="192" height="192"></canvas>
+
+<p>Save as <strong>icon-512.png</strong>:</p>
+<canvas id="c512" width="512" height="512"></canvas>
+
+<script>
+function drawIcon(canvas) {
+    const ctx = canvas.getContext('2d');
+    const s = canvas.width;
+    const cx = s / 2;
+    const cy = s / 2;
+
+    // Rounded square background with gradient
+    const grad = ctx.createLinearGradient(0, 0, s, s);
+    grad.addColorStop(0, '#2E7D32');
+    grad.addColorStop(1, '#66BB6A');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, s, s, s * 0.18);
+    ctx.fill();
+
+    // Subtle inner shadow
+    const innerGrad = ctx.createRadialGradient(cx, cy * 0.6, 0, cx, cy, s * 0.7);
+    innerGrad.addColorStop(0, 'rgba(255,255,255,0.15)');
+    innerGrad.addColorStop(1, 'rgba(0,0,0,0.1)');
+    ctx.fillStyle = innerGrad;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, s, s, s * 0.18);
+    ctx.fill();
+
+    // Clock circle
+    const clockR = s * 0.28;
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = s * 0.025;
+    ctx.beginPath();
+    ctx.arc(cx, cy * 0.85, clockR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Clock tick marks
+    for (let i = 0; i < 12; i++) {
+        const angle = (i * 30 - 90) * Math.PI / 180;
+        const innerR = clockR * 0.85;
+        const outerR = clockR * 0.95;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * innerR, cy * 0.85 + Math.sin(angle) * innerR);
+        ctx.lineTo(cx + Math.cos(angle) * outerR, cy * 0.85 + Math.sin(angle) * outerR);
+        ctx.lineWidth = i % 3 === 0 ? s * 0.02 : s * 0.01;
+        ctx.stroke();
+    }
+
+    // Clock hands (hour at ~10, minute at ~2)
+    ctx.lineCap = 'round';
+
+    // Hour hand
+    const hourAngle = (300 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy * 0.85);
+    ctx.lineTo(cx + Math.cos(hourAngle) * clockR * 0.5, cy * 0.85 + Math.sin(hourAngle) * clockR * 0.5);
+    ctx.lineWidth = s * 0.03;
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+
+    // Minute hand
+    const minAngle = (60 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy * 0.85);
+    ctx.lineTo(cx + Math.cos(minAngle) * clockR * 0.7, cy * 0.85 + Math.sin(minAngle) * clockR * 0.7);
+    ctx.lineWidth = s * 0.02;
+    ctx.stroke();
+
+    // Center dot
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(cx, cy * 0.85, s * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Checkmark below clock
+    const checkX = cx;
+    const checkY = cy * 0.85 + clockR + s * 0.1;
+    const checkSize = s * 0.08;
+    ctx.strokeStyle = '#A5D6A7';
+    ctx.lineWidth = s * 0.03;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(checkX - checkSize, checkY);
+    ctx.lineTo(checkX - checkSize * 0.3, checkY + checkSize * 0.7);
+    ctx.lineTo(checkX + checkSize, checkY - checkSize * 0.5);
+    ctx.stroke();
+
+    // Pulse rings (activity indicator)
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = s * 0.01;
+    ctx.beginPath();
+    ctx.arc(cx, cy * 0.85, clockR + s * 0.04, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    ctx.arc(cx, cy * 0.85, clockR + s * 0.07, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+drawIcon(document.getElementById('c192'));
+drawIcon(document.getElementById('c512'));
+</script>
+</body>
+</html>
