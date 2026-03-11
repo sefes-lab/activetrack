@@ -24,7 +24,7 @@ ActiveTrack is a lightweight, single-file PWA that periodically prompts you to l
 
 ### Run locally
 
-Open `ActivityLog.html` in any modern browser. That's it.
+Open `activetrack.html` in any modern browser. That's it.
 
 ### Install as PWA
 
@@ -38,13 +38,13 @@ Host the files on any HTTPS server (e.g., GitHub Pages), then:
 1. Create a new GitHub repository
 2. Push the contents of this folder to the `main` branch
 3. Go to Settings → Pages → Source: `main` / `/ (root)`
-4. Access at `https://YOUR_USERNAME.github.io/REPO_NAME/ActivityLog.html`
+4. Access at `https://YOUR_USERNAME.github.io/REPO_NAME/activetrack.html`
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `ActivityLog.html` | Main application (single-file HTML/CSS/JS) |
+| `activetrack.html` | Main application (single-file HTML/CSS/JS) |
 | `manifest.json` | PWA manifest for installability |
 | `sw.js` | Service worker for offline caching |
 | `icon-192.png` | App icon (192x192) |

@@ -1,6 +1,6 @@
 const CACHE_NAME = 'activetrack-v2';
 const ASSETS = [
-    './ActivityLog.html',
+    './activetrack.html',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'

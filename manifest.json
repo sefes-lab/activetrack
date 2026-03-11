@@ -2,7 +2,7 @@
     "name": "ActiveTrack",
     "short_name": "ActiveTrack",
     "description": "Automated time and activity logger. Asks what you're up to at regular intervals.",
-    "start_url": "./ActivityLog.html",
+    "start_url": "./activetrack.html",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#4CAF50",
