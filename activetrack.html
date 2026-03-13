@@ -1,34 +1,10 @@
 <!--
-ActiveTrack v0.44
-Date: March 10, 2026
+ActiveTrack v0.451
+Date: March 11, 2026
 Creator: sefes
 
 Automated time and activity logger. Asks what you're up to at regular intervals.
-
-Version History:
-- v0.27: Mobile-responsive design, Light/Dark mode toggle
-- v0.28: Added "Ticket" quick option, collapsible sidebar, fixed mobile layout issues
-- v0.29: Changed toggle to vertical arrows, fixed duplicate button, light grey toggle color, 
-         adjusted toggle position, compact time displays on same line
-- v0.30: Removed current time display, countdown in styled pillbox
-- v0.31: Code optimizations (efficient sidebar updates, debounced saves, input validation),
-         UX improvements (paused state visual, keyboard shortcuts P/ESC, countdown warning colors,
-         editable quick-fill options, soft delete with undo)
-- v0.32: Fixed settings panel sizing (compact inputs, resizable textarea with constraints)
-- v0.33: Fixed button positioning in settings panel (clear: both prevents line wrapping)
-- v0.34: Updated Quick Fill defaults (Break-Fix full text, Ticket with colon/space, added Projects)
-- v0.35: Rebranded to ActiveTrack, added intro description
-- v0.36: Quick wins (keyboard shortcut hints, fixed inline styles, initial countdown display,
-         improved CSV filename format, save indicator, fixed z-index)
-- v0.37: Added beep notification toggle in settings
-- v0.38: Daily log rotation at midnight or on reactivation, with save prompt
-- v0.39: Inline edit/delete per entry, manual Add Entry form in sidebar
-- v0.40: Converted to Progressive Web App (PWA) with offline support
-- v0.41: Export/Import JSON for transferring logs between devices and browsers
-- v0.42: Import dialog with radio buttons for merge/replace selection
-- v0.43: UI design overhaul - monochrome button hierarchy (primary/secondary/danger/tertiary),
-         consistent icon+tooltip system, settings/dialog/form buttons updated
-- v0.44: Replaced native alert/confirm dialogs with custom styled modals (removes file:// title)
+See CHANGELOG.md for full version history.
 
 Features:
 - localStorage persistence
@@ -375,6 +351,10 @@ body.dark-mode .countdown.warning {
 
 .dialog-countdown.warning {
     color: #f44336;
+}
+
+body.dark-mode .dialog-countdown {
+    color: #e0e0e0;
 }
 
 .last-answer {
@@ -903,13 +883,13 @@ body.dark-mode .custom-modal-box {
     <div class="settings-panel" id="settings-panel">
         <h3>Settings</h3>
         <label for="interval-setting">Prompt Interval (minutes):</label>
-        <input type="number" id="interval-setting" min="1" max="60" value="6">
+        <input type="number" id="interval-setting" min="1" max="60" value="30">
         
         <label for="timeout-setting">Dialog Timeout (seconds):</label>
         <input type="number" id="timeout-setting" min="10" max="120" value="30">
         
         <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
-            <input type="checkbox" id="beep-setting" checked style="width: auto; min-height: auto;">
+            <input type="checkbox" id="beep-setting" style="width: auto; min-height: auto;">
             Enable beep notification
         </label>
         
@@ -943,11 +923,11 @@ body.dark-mode .custom-modal-box {
 <script>
 // Configuration with defaults
 let config = {
-    intervalMinutes: 6,
+    intervalMinutes: 30,
     timeoutSeconds: 30,
-    darkMode: false,
+    darkMode: true,
     sidebarCollapsed: false,
-    beepEnabled: true,
+    beepEnabled: false,
     quickFillOptions: [
         { label: 'Break-Fix', value: 'Break-Fix' },
         { label: 'Support', value: 'Support' },
@@ -1196,11 +1176,35 @@ function updateSidebar() {
     const sidebar = document.getElementById('sidebar');
     const totalEntries = activityLog.length;
     
+    // Calculate daily tracked hours
+    const today = getTodayString();
+    const todayEntries = activityLog.filter(e => e.date === today);
+    let dailyHoursText = '0h 0m';
+    if (todayEntries.length >= 2) {
+        const first = todayEntries[0].time;
+        const last = todayEntries[todayEntries.length - 1].time;
+        const [fh, fm, fs] = first.split(':').map(Number);
+        const [lh, lm, ls] = last.split(':').map(Number);
+        const diffMin = (lh * 60 + lm) - (fh * 60 + fm);
+        if (diffMin > 0) {
+            dailyHoursText = `${Math.floor(diffMin / 60)}h ${diffMin % 60}m`;
+        }
+    } else if (todayEntries.length === 1) {
+        // Single entry — time since first entry
+        const first = todayEntries[0].time;
+        const [fh, fm] = first.split(':').map(Number);
+        const now = new Date();
+        const diffMin = (now.getHours() * 60 + now.getMinutes()) - (fh * 60 + fm);
+        if (diffMin > 0) {
+            dailyHoursText = `${Math.floor(diffMin / 60)}h ${diffMin % 60}m`;
+        }
+    }
+
     // Always do full rebuild to include action icons
     sidebar.innerHTML = `
         <h2>Activity Log</h2>
         <div class="log-stats">
-            <strong>Total Entries:</strong> ${totalEntries}
+            <strong>Total Entries:</strong> ${totalEntries} &nbsp;|&nbsp; <strong>Today:</strong> ${todayEntries.length} entries &nbsp;|&nbsp; <strong>Tracked:</strong> ${dailyHoursText}
         </div>
         <button class="add-btn btn-secondary btn-icon" onclick="toggleAddForm()" title="Add a manual entry">+</button>
         <div class="add-entry-form" id="add-entry-form">
@@ -1432,7 +1436,7 @@ function downloadCSV() {
 function exportLog() {
     try {
         const data = {
-            version: '0.44',
+            version: '0.45',
             exported: new Date().toISOString(),
             config: config,
             lastAnswer: lastAnswer,
@@ -1762,9 +1766,9 @@ function toggleSidebar() {
 
 // --- Global keyboard shortcuts ---
 document.addEventListener('keydown', function(e) {
-    // P key to toggle pause (only when dialog is not open)
+    // P key to toggle pause (works globally, but not when typing in an input)
     if (e.key === 'p' || e.key === 'P') {
-        if (!isDialogOpen) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
             togglePause();
         }
     }
