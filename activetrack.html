@@ -1,6 +1,6 @@
 <!--
-ActiveTrack v0.451
-Date: March 11, 2026
+ActiveTrack v0.47
+Date: March 15, 2026
 Creator: sefes
 
 Automated time and activity logger. Asks what you're up to at regular intervals.
@@ -31,7 +31,7 @@ Features:
 <style>
 /* General styles */
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     display: flex;
     justify-content: space-between;
     margin: 0;
@@ -124,6 +124,14 @@ body.dark-mode .log-stats {
     opacity: 1;
 }
 
+/* Button toolbar */
+.button-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
 body.dark-mode .intro-text {
     color: #aaa;
 }
@@ -133,7 +141,7 @@ body.dark-mode .keyboard-hints {
 }
 
 body.dark-mode .save-indicator {
-    color: #81c784;
+    color: #66BB6A;
 }
 
 @media (max-width: 768px) {
@@ -241,7 +249,8 @@ body.dark-mode .save-indicator {
     padding: 10px 20px;
     border-radius: 20px;
     border: 1px solid #4CAF50;
-    transition: background-color 0.3s, border-color 0.3s;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.15);
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
 .countdown.paused {
@@ -260,7 +269,7 @@ body.dark-mode .save-indicator {
 
 body.dark-mode .countdown {
     background-color: #2d4a2d;
-    border-color: #4CAF50;
+    border-color: #66BB6A;
     color: #a5d6a7;
 }
 
@@ -394,6 +403,15 @@ th {
     background-color: #e0e0e0;
 }
 
+/* Zebra striping */
+tbody tr:nth-child(even) {
+    background-color: rgba(0,0,0,0.03);
+}
+
+body.dark-mode tbody tr:nth-child(even) {
+    background-color: rgba(255,255,255,0.03);
+}
+
 .action-icons {
     white-space: nowrap;
     font-size: 14px;
@@ -452,6 +470,46 @@ body.dark-mode .add-entry-form {
     border-color: #555;
 }
 
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 30px 15px;
+    color: #999;
+    font-size: 14px;
+    font-style: italic;
+}
+
+body.dark-mode .empty-state {
+    color: #666;
+}
+
+/* Category + detail inline layout */
+.category-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.category-row select {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 160px;
+}
+
+.category-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .category-row {
+        flex-direction: column;
+    }
+    .category-row select {
+        width: 100%;
+    }
+}
+
 .edit-input {
     width: 100%;
     padding: 4px;
@@ -478,6 +536,23 @@ button {
 button:hover {
     opacity: 0.85;
     transform: translateY(-1px);
+}
+
+.sidebar-toggle:hover {
+    transform: translateY(-50%);
+}
+
+/* Smooth transitions */
+tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+body.dark-mode tbody tr:hover {
+    background-color: rgba(255,255,255,0.06);
 }
 
 /* Button hierarchy */
@@ -520,12 +595,12 @@ button:hover {
 
 /* Dark mode button overrides */
 body.dark-mode .btn-secondary {
-    color: #81c784;
-    border-color: #81c784;
+    color: #66BB6A;
+    border-color: #66BB6A;
 }
 
 body.dark-mode .btn-secondary:hover {
-    background-color: rgba(129, 199, 132, 0.1);
+    background-color: rgba(102, 187, 106, 0.1);
 }
 
 body.dark-mode .btn-tertiary {
@@ -598,6 +673,7 @@ body.dark-mode .pause-btn.paused:hover {
     margin-bottom: 20px;
     display: none;
     max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .settings-panel.visible {
@@ -693,6 +769,7 @@ body.dark-mode .pause-btn.paused:hover {
     right: 0;
     bottom: 0;
     background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -760,6 +837,7 @@ body.dark-mode .import-dialog-box {
     right: 0;
     bottom: 0;
     background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -869,7 +947,7 @@ body.dark-mode .custom-modal-box {
 
 <!-- Sidebar toggle button -->
 <button class="sidebar-toggle sidebar-visible" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
-    ▼
+    ✕
 </button>
 
 <div class="content">
@@ -893,19 +971,22 @@ body.dark-mode .custom-modal-box {
             Enable beep notification
         </label>
         
-        <label for="quickfill-setting">Quick Fill Options (one per line):</label>
+        <label for="quickfill-setting">Categories (emoji label, one per line):</label>
         <textarea id="quickfill-setting" rows="6"></textarea>
         
         <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
+        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.47</div>
     </div>
     
     <!-- Question container -->
     <div class="question-container" id="question-container"></div>
     
-    <button id="pause-btn" class="btn-secondary btn-icon pause-btn" onclick="togglePause()" title="Pause timer (P)">⏸</button>
-    <button class="btn-secondary btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
-    <span class="save-indicator" id="save-indicator">✓ Saved</span>
+    <div class="button-toolbar">
+        <button id="pause-btn" class="btn-secondary btn-icon pause-btn" onclick="togglePause()" title="Pause timer (P)">⏸</button>
+        <button class="btn-secondary btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
+        <span class="save-indicator" id="save-indicator">✓ Saved</span>
+    </div>
     
     <div class="keyboard-hints">
         Keyboard shortcuts: Press P to pause/unpause • Press ESC to cancel dialog
@@ -922,24 +1003,31 @@ body.dark-mode .custom-modal-box {
 
 <script>
 // Configuration with defaults
+const DEFAULT_CATEGORIES = [
+    { emoji: '🔧', label: 'Break-Fix' },
+    { emoji: '🎫', label: 'Ticket' },
+    { emoji: '📋', label: 'Projects' },
+    { emoji: '🤝', label: 'Meeting' },
+    { emoji: '💬', label: 'Support' },
+    { emoji: '📧', label: 'Comms' },
+    { emoji: '📚', label: 'Learning' },
+    { emoji: '🛠️', label: 'Admin' },
+    { emoji: '☕', label: 'Break' },
+    { emoji: '❓', label: 'Other' }
+];
+
 let config = {
     intervalMinutes: 30,
     timeoutSeconds: 30,
     darkMode: true,
     sidebarCollapsed: false,
     beepEnabled: false,
-    quickFillOptions: [
-        { label: 'Break-Fix', value: 'Break-Fix' },
-        { label: 'Support', value: 'Support' },
-        { label: 'Meeting', value: 'Meeting' },
-        { label: 'Ticket', value: 'Ticket: ' },
-        { label: 'Projects', value: 'Projects' }
-    ]
+    categories: [...DEFAULT_CATEGORIES]
 };
 
 // Activity log data
 let activityLog = [];
-let lastAnswer = "";
+let lastCategory = "";
 let countdownTime = config.intervalMinutes * 60;
 let isPaused = false;
 let countdownInterval;
@@ -1005,7 +1093,7 @@ function saveToLocalStorage() {
     saveDebounceTimeout = setTimeout(() => {
         try {
             localStorage.setItem('activityLog', JSON.stringify(activityLog));
-            localStorage.setItem('lastAnswer', lastAnswer);
+            localStorage.setItem('lastCategory', lastCategory);
             localStorage.setItem('config', JSON.stringify(config));
             showSaveIndicator();
         } catch (e) {
@@ -1019,7 +1107,7 @@ function saveToLocalStorageImmediate() {
     if (saveDebounceTimeout) clearTimeout(saveDebounceTimeout);
     try {
         localStorage.setItem('activityLog', JSON.stringify(activityLog));
-        localStorage.setItem('lastAnswer', lastAnswer);
+        localStorage.setItem('lastCategory', lastCategory);
         localStorage.setItem('config', JSON.stringify(config));
         showSaveIndicator();
     } catch (e) {
@@ -1074,7 +1162,7 @@ function promptDayRotation(previousDate) {
         }
         
         activityLog = [];
-        lastAnswer = '';
+        lastCategory = '';
         lastSidebarLength = 0;
         updateSidebar();
         localStorage.setItem('lastActiveDate', getTodayString());
@@ -1100,13 +1188,18 @@ function scheduleMidnightCheck() {
 function loadFromLocalStorage() {
     try {
         const savedLog = localStorage.getItem('activityLog');
-        const savedAnswer = localStorage.getItem('lastAnswer');
+        const savedCategory = localStorage.getItem('lastCategory');
         const savedConfig = localStorage.getItem('config');
         
         if (savedLog) activityLog = JSON.parse(savedLog);
-        if (savedAnswer) lastAnswer = savedAnswer;
+        if (savedCategory) lastCategory = savedCategory;
         if (savedConfig) {
             const parsed = JSON.parse(savedConfig);
+            // Migrate old quickFillOptions to categories if needed
+            if (parsed.quickFillOptions && !parsed.categories) {
+                parsed.categories = [...DEFAULT_CATEGORIES];
+                delete parsed.quickFillOptions;
+            }
             // Merge with defaults to handle new config properties
             config = { ...config, ...parsed };
             countdownTime = config.intervalMinutes * 60;
@@ -1122,7 +1215,7 @@ function loadFromLocalStorage() {
         if (config.sidebarCollapsed) {
             document.getElementById('sidebar').classList.add('collapsed');
             const toggleBtn = document.getElementById('sidebar-toggle');
-            toggleBtn.textContent = '▲';
+            toggleBtn.textContent = '☰';
             toggleBtn.classList.remove('sidebar-visible');
             toggleBtn.classList.add('sidebar-collapsed');
         }
@@ -1210,11 +1303,13 @@ function updateSidebar() {
         <div class="add-entry-form" id="add-entry-form">
             <input type="date" id="add-date" value="${getTodayString()}">
             <input type="time" id="add-time" step="1" value="${new Date().toTimeString().split(' ')[0]}">
-            <input type="text" id="add-response" placeholder="Activity description">
-            <select id="add-quickfill" onchange="if(this.value) document.getElementById('add-response').value = this.value;">
-                <option value="">-- Quick Fill --</option>
-                ${config.quickFillOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
-            </select>
+            <div class="category-row">
+                <select id="add-category" aria-label="Category">
+                    <option value="">-- Category --</option>
+                    ${config.categories.map(cat => `<option value="${cat.label}">${cat.emoji} ${cat.label}</option>`).join('')}
+                </select>
+                <input type="text" id="add-response" placeholder="Details (optional)">
+            </div>
             <button class="btn-secondary" onclick="addManualEntry()">Save</button>
             <button class="btn-tertiary" onclick="toggleAddForm()">Cancel</button>
         </div>
@@ -1223,24 +1318,30 @@ function updateSidebar() {
                 <tr>
                     <th>Date</th>
                     <th>Time</th>
-                    <th>Response</th>
+                    <th>Category</th>
+                    <th>Details</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="activity-tbody">
-                ${activityLog.map((entry, i) => `
+                ${activityLog.map((entry, i) => {
+                    const cat = config.categories.find(c => c.label === entry.category);
+                    const catDisplay = cat ? cat.emoji + ' ' + cat.label : (entry.category || '');
+                    return `
                     <tr id="row-${i}">
                         <td>${entry.date}</td>
                         <td>${entry.time}</td>
-                        <td id="resp-${i}">${entry.response}</td>
+                        <td>${catDisplay}</td>
+                        <td id="resp-${i}">${entry.response || ''}</td>
                         <td class="action-icons">
                             <span onclick="editEntry(${i})" title="Edit">✏️</span>
                             <span onclick="deleteEntry(${i})" title="Delete">🗑️</span>
                         </td>
-                    </tr>
-                `).join('')}
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>
+        ${totalEntries === 0 ? '<div class="empty-state">No entries yet. Activity will appear here as you log it.</div>' : ''}
         <button class="btn-secondary" onclick="downloadCSV()" title="Download log as CSV">📄 CSV</button>
         <button class="btn-secondary" onclick="exportLog()" title="Export log as JSON">⬇ Export</button>
         <button class="btn-secondary" onclick="importLog()" title="Import log from JSON">� Import</button>
@@ -1265,36 +1366,42 @@ function promptActivity() {
     
     let lastAnswerLabel = document.createElement('div');
     lastAnswerLabel.classList.add('last-answer');
-    lastAnswerLabel.textContent = `Last answer: ${lastAnswer || 'Nothing'}`;
+    const lastCatDisplay = lastCategory ? config.categories.find(c => c.label === lastCategory) : null;
+    lastAnswerLabel.textContent = `Last: ${lastCatDisplay ? lastCatDisplay.emoji + ' ' + lastCatDisplay.label : 'Nothing'}`;
     
     let label = document.createElement('label');
     label.id = 'dialog-title';
     label.textContent = 'What are you doing?';
     
-    let input = document.createElement('input');
-    input.type = 'text';
-    input.value = lastAnswer;
-    input.setAttribute('aria-label', 'Activity description');
+    // Category + detail row
+    let categoryRow = document.createElement('div');
+    categoryRow.classList.add('category-row');
     
-    // Quick-fill dropdown
     let select = document.createElement('select');
-    select.setAttribute('aria-label', 'Quick fill options');
+    select.setAttribute('aria-label', 'Category');
     
     let defaultOption = document.createElement('option');
     defaultOption.value = '';
-    defaultOption.textContent = '-- Select Quick Fill --';
+    defaultOption.textContent = '-- Category --';
     select.appendChild(defaultOption);
     
-    config.quickFillOptions.forEach(opt => {
+    config.categories.forEach(cat => {
         let option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.label;
+        option.value = cat.label;
+        option.textContent = `${cat.emoji} ${cat.label}`;
         select.appendChild(option);
     });
     
-    select.onchange = () => {
-        if (select.value) input.value = select.value;
-    };
+    // Pre-select last category if available
+    if (lastCategory) select.value = lastCategory;
+    
+    let input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Details (optional)';
+    input.setAttribute('aria-label', 'Activity details');
+    
+    categoryRow.appendChild(select);
+    categoryRow.appendChild(input);
     
     let submit = document.createElement('button');
     submit.textContent = 'Submit';
@@ -1307,8 +1414,7 @@ function promptActivity() {
     
     dialogDialog.appendChild(lastAnswerLabel);
     dialogDialog.appendChild(label);
-    dialogDialog.appendChild(input);
-    dialogDialog.appendChild(select);
+    dialogDialog.appendChild(categoryRow);
     dialogDialog.appendChild(submit);
     dialogDialog.appendChild(dialogCountdownLabel);
     
@@ -1332,7 +1438,7 @@ function promptActivity() {
             
             if (dialogCountdown <= 0) {
                 clearInterval(dialogInterval);
-                recordActivity(lastAnswer || 'Nothing');
+                recordActivity(lastCategory || '', '');
                 closeDialog();
             }
         }
@@ -1340,8 +1446,9 @@ function promptActivity() {
     
     function submitResponse() {
         clearInterval(dialogInterval);
-        const response = input.value.trim() || lastAnswer || 'Nothing';
-        recordActivity(response);
+        const category = select.value || lastCategory || '';
+        const detail = input.value.trim();
+        recordActivity(category, detail);
         closeDialog();
     }
     
@@ -1391,23 +1498,24 @@ function restoreTitleBar() {
 }
 
 // --- Record activity to log ---
-function recordActivity(response) {
+function recordActivity(category, detail) {
     const now = new Date();
     activityLog.push({
         date: now.toISOString().split('T')[0],
         time: now.toTimeString().split(' ')[0],
-        response: response
+        category: category,
+        response: detail
     });
-    lastAnswer = response;
+    lastCategory = category;
     updateSidebar();
     saveToLocalStorage();
 }
 
 // --- Convert activity log to CSV ---
 function getCSVContent() {
-    let csv = 'Date,Time,Response\n';
+    let csv = 'Date,Time,Category,Details\n';
     activityLog.forEach(entry => {
-        csv += `${entry.date},${entry.time},"${entry.response.replace(/"/g, '""')}"\n`;
+        csv += `${entry.date},${entry.time},"${(entry.category || '').replace(/"/g, '""')}","${(entry.response || '').replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -1436,10 +1544,10 @@ function downloadCSV() {
 function exportLog() {
     try {
         const data = {
-            version: '0.45',
+            version: '0.47',
             exported: new Date().toISOString(),
             config: config,
-            lastAnswer: lastAnswer,
+            lastCategory: lastCategory,
             activityLog: activityLog
         };
         const now = new Date();
@@ -1518,7 +1626,7 @@ function executeImport(btn, action) {
     
     if (mode === 'replace') {
         activityLog = data.activityLog;
-        lastAnswer = data.lastAnswer || '';
+        lastCategory = data.lastCategory || data.lastAnswer || '';
         if (data.config) {
             config = { ...config, ...data.config };
         }
@@ -1565,7 +1673,9 @@ function saveEdit(index, newValue) {
 // --- Delete single entry ---
 function deleteEntry(index) {
     const entry = activityLog[index];
-    showConfirm('Delete Entry', `Delete "${entry.response}" at ${entry.time}?`, 'Delete', 'Cancel').then(ok => {
+    const catObj = config.categories.find(c => c.label === entry.category);
+    const display = catObj ? `${catObj.emoji} ${catObj.label}` : (entry.response || entry.category || 'entry');
+    showConfirm('Delete Entry', `Delete "${display}" at ${entry.time}?`, 'Delete', 'Cancel').then(ok => {
         if (ok) {
             activityLog.splice(index, 1);
             lastSidebarLength = 0;
@@ -1583,9 +1693,8 @@ function toggleAddForm() {
     if (form.classList.contains('visible')) {
         document.getElementById('add-date').value = getTodayString();
         document.getElementById('add-time').value = new Date().toTimeString().split(' ')[0];
+        document.getElementById('add-category').value = '';
         document.getElementById('add-response').value = '';
-        document.getElementById('add-quickfill').value = '';
-        document.getElementById('add-response').focus();
     }
 }
 
@@ -1593,14 +1702,15 @@ function toggleAddForm() {
 function addManualEntry() {
     const date = document.getElementById('add-date').value;
     const time = document.getElementById('add-time').value;
+    const category = document.getElementById('add-category').value;
     const response = document.getElementById('add-response').value.trim();
     
-    if (!date || !time || !response) {
-        showAlert('Missing Fields', 'Please fill in all fields.');
+    if (!date || !time || !category) {
+        showAlert('Missing Fields', 'Please select a date, time, and category.');
         return;
     }
     
-    const newEntry = { date: date, time: time, response: response };
+    const newEntry = { date: date, time: time, category: category, response: response };
     const newTimestamp = date + 'T' + time;
     
     // Find correct insertion point
@@ -1625,7 +1735,7 @@ function clearLog() {
         if (ok) {
             deletedLog = [...activityLog];
             activityLog = [];
-            lastAnswer = '';
+            lastCategory = '';
             lastSidebarLength = 0;
             updateSidebar();
             saveToLocalStorageImmediate();
@@ -1692,9 +1802,9 @@ function toggleSettings() {
         document.getElementById('timeout-setting').value = config.timeoutSeconds;
         document.getElementById('beep-setting').checked = config.beepEnabled;
         
-        // Populate quick-fill options
-        const quickFillText = config.quickFillOptions.map(opt => opt.value).join('\n');
-        document.getElementById('quickfill-setting').value = quickFillText;
+        // Populate categories
+        const categoriesText = config.categories.map(cat => `${cat.emoji} ${cat.label}`).join('\n');
+        document.getElementById('quickfill-setting').value = categoriesText;
     }
 }
 
@@ -1720,22 +1830,21 @@ function saveSettings() {
     config.beepEnabled = document.getElementById('beep-setting').checked;
     countdownTime = intervalMinutes * 60;
     
-    // Parse quick-fill options
+    // Parse categories (format: "emoji label" per line)
     const lines = quickFillText.split('\n').filter(line => line.trim() !== '');
     if (lines.length > 0) {
-        config.quickFillOptions = lines.map(line => ({
-            label: line.trim(),
-            value: line.trim()
-        }));
+        config.categories = lines.map(line => {
+            const trimmed = line.trim();
+            // Split on first space to separate emoji from label
+            const spaceIdx = trimmed.indexOf(' ');
+            if (spaceIdx > 0) {
+                return { emoji: trimmed.substring(0, spaceIdx), label: trimmed.substring(spaceIdx + 1).trim() };
+            }
+            return { emoji: '❓', label: trimmed };
+        });
     } else {
         // Reset to defaults if empty
-        config.quickFillOptions = [
-            { label: 'Break-Fix', value: 'Break-Fix' },
-            { label: 'Support', value: 'Support' },
-            { label: 'Meeting', value: 'Meeting' },
-            { label: 'Ticket', value: 'Ticket: ' },
-            { label: 'Projects', value: 'Projects' }
-        ];
+        config.categories = [...DEFAULT_CATEGORIES];
     }
     
     saveToLocalStorageImmediate();
@@ -1752,11 +1861,11 @@ function toggleSidebar() {
     config.sidebarCollapsed = sidebar.classList.contains('collapsed');
     
     if (config.sidebarCollapsed) {
-        toggleBtn.textContent = '▲';
+        toggleBtn.textContent = '☰';
         toggleBtn.classList.remove('sidebar-visible');
         toggleBtn.classList.add('sidebar-collapsed');
     } else {
-        toggleBtn.textContent = '▼';
+        toggleBtn.textContent = '✕';
         toggleBtn.classList.remove('sidebar-collapsed');
         toggleBtn.classList.add('sidebar-visible');
     }

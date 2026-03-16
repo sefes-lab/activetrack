@@ -1,5 +1,25 @@
 # ActiveTrack — Version History
 
+## v0.47 — March 15, 2026
+- Replaced Quick Fill with emoji-tagged Categories (🔧 Break-Fix, 🎫 Ticket, 📋 Projects, etc.)
+- Category dropdown + optional detail text on same line in prompt dialog and manual entry
+- New Category column in activity log table
+- Categories editable in Settings (emoji + label per line, defaults reset if emptied)
+- Backward compatible with old entries and exports
+- CSV/JSON export includes category field
+
+## v0.46 — March 15, 2026
+- UI polish: system font stack (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto)
+- Zebra striping on activity log table rows
+- Button toolbar with flex layout and consistent spacing
+- Countdown pill shadow for depth
+- Backdrop blur on dialog and modal overlays
+- Settings panel shadow to match dialog elevation
+- Softened dark mode green accent (#66BB6A)
+- Smooth hover transitions on table rows and buttons
+- Sidebar toggle icon changed to ☰/✕ (hamburger/close)
+- Empty state message when activity log has no entries
+
 ## v0.45 — March 11, 2026
 - Changed defaults: 30-minute prompt interval, dark mode on, beep muted
 - Added daily activity hours tracker in sidebar (entry count + tracked time span)
