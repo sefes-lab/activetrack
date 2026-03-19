@@ -1,5 +1,5 @@
 <!--
-ActiveTrack v0.48
+ActiveTrack v0.481
 Date: March 18, 2026
 Creator: sefes
 
@@ -1063,7 +1063,7 @@ body.dark-mode .date-nav .date-label.viewing-past {
         
         <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
-        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.48</div>
+        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.481</div>
     </div>
     
     <!-- Question container -->
@@ -1526,7 +1526,7 @@ function updateSidebar() {
         ${totalEntries === 0 ? '<div class="empty-state">No entries for this day.</div>' : ''}
         <button class="btn-secondary" onclick="downloadCSV()" title="Download viewed day as CSV">📄 CSV</button>
         <button class="btn-secondary" onclick="exportLog()" title="Export all data as JSON">⬇ Export</button>
-        <button class="btn-secondary" onclick="importLog()" title="Import log from JSON">⬆ Import</button>
+        <button class="btn-secondary" onclick="importLog()" title="Import log from JSON or CSV">⬆ Import</button>
         ${isToday ? '<button class="btn-danger" onclick="clearLog()" title="Clear today\'s entries">🗑 Clear</button>' : ''}
     `;
     lastSidebarLength = totalEntries;
@@ -1748,11 +1748,11 @@ function exportLog() {
     }
 }
 
-// --- Import log from JSON ---
+// --- Import log from JSON or CSV ---
 function importLog() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.json,.csv';
     
     input.onchange = function(e) {
         const file = e.target.files[0];
@@ -1761,14 +1761,30 @@ function importLog() {
         const reader = new FileReader();
         reader.onload = function(event) {
             try {
-                const data = JSON.parse(event.target.result);
+                const text = event.target.result;
                 
-                if (!data.activityLog || !Array.isArray(data.activityLog)) {
-                    showAlert('Import Error', 'Invalid file format. Expected an ActiveTrack export file.');
-                    return;
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    // Parse CSV
+                    const entries = parseCSV(text);
+                    if (entries.length === 0) {
+                        showAlert('Import Error', 'No valid entries found in CSV file.');
+                        return;
+                    }
+                    const data = {
+                        activityLog: entries,
+                        exported: null,
+                        source: 'csv'
+                    };
+                    showImportDialog(data);
+                } else {
+                    // Parse JSON
+                    const data = JSON.parse(text);
+                    if (!data.activityLog || !Array.isArray(data.activityLog)) {
+                        showAlert('Import Error', 'Invalid file format. Expected an ActiveTrack export file.');
+                        return;
+                    }
+                    showImportDialog(data);
                 }
-                
-                showImportDialog(data);
             } catch (err) {
                 showAlert('Import Error', 'Failed to import: ' + err.message);
             }
@@ -1779,14 +1795,70 @@ function importLog() {
     input.click();
 }
 
+// --- Parse CSV text into activity entries ---
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) return []; // Need header + at least one row
+    
+    // Skip header row
+    const entries = [];
+    for (let i = 1; i < lines.length; i++) {
+        const fields = parseCSVLine(lines[i]);
+        if (fields.length >= 2) {
+            entries.push({
+                date: (fields[0] || '').trim(),
+                time: (fields[1] || '').trim(),
+                category: (fields[2] || '').trim(),
+                response: (fields[3] || '').trim()
+            });
+        }
+    }
+    return entries.filter(e => e.date && e.time);
+}
+
+// --- Parse a single CSV line respecting quoted fields ---
+function parseCSVLine(line) {
+    const fields = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+            if (ch === '"' && i + 1 < line.length && line[i + 1] === '"') {
+                current += '"';
+                i++; // skip escaped quote
+            } else if (ch === '"') {
+                inQuotes = false;
+            } else {
+                current += ch;
+            }
+        } else {
+            if (ch === '"') {
+                inQuotes = true;
+            } else if (ch === ',') {
+                fields.push(current);
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+    }
+    fields.push(current);
+    return fields;
+}
+
 function showImportDialog(data) {
     const overlay = document.createElement('div');
     overlay.classList.add('import-dialog');
     
+    const sourceLabel = data.source === 'csv' ? 'CSV file' : 
+        (data.exported ? new Date(data.exported).toLocaleDateString() : 'unknown date');
+    
     overlay.innerHTML = `
         <div class="import-dialog-box">
             <h3>Import Log</h3>
-            <p>Found ${data.activityLog.length} entries from ${data.exported ? new Date(data.exported).toLocaleDateString() : 'unknown date'}.</p>
+            <p>Found ${data.activityLog.length} entries from ${sourceLabel}.</p>
             <label><input type="radio" name="import-mode" value="merge" checked> Merge with existing log</label>
             <label><input type="radio" name="import-mode" value="replace"> Replace existing log</label>
             <div class="import-actions">
