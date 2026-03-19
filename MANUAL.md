@@ -82,14 +82,23 @@ You can add, remove, or reorder lines. If you clear the textarea entirely and sa
 
 ## Activity Log (Sidebar)
 
-The sidebar on the right displays your activity log as a table with columns: Date, Time, Category, and Details.
+The sidebar on the right displays your activity log as a table with columns: Time, Category, and Details.
+
+### Date Navigation
+
+At the top of the sidebar, date navigation arrows let you browse between days:
+- ◀ — go to the previous archived day
+- ▶ — go to the next day
+- Click the date label to jump back to today
+
+When viewing today, the log is fully editable. When viewing a past (archived) day, entries are read-only — a "📖 Viewing archived day (read-only)" notice appears.
 
 ### Stats Bar
 
 At the top of the sidebar, a stats bar shows:
-- Total entries across all days in the current session
-- Today's entry count
-- Tracked time (span from your first entry to your last entry today)
+- Entry count for the viewed day
+- Tracked time (span from first to last entry)
+- Archive count (number of archived days)
 
 ### Adding a Manual Entry
 
@@ -135,6 +144,7 @@ Click the ⚙ button to open the Settings panel.
 | Dialog Timeout | 30 seconds | 10–120 sec | How long the dialog waits before auto-submitting |
 | Enable Beep | Off | On/Off | Play a beep sound when the dialog appears and at the 10-second warning |
 | Categories | 10 defaults | Any | Emoji-tagged activity categories, one per line |
+| Auto-purge | 0 (off) | 0–365 days | Automatically delete archived entries older than N days (0 = keep forever) |
 
 Click "Save Settings" to apply. Settings are stored in your browser and persist across sessions.
 
@@ -146,16 +156,20 @@ Toggle the switch in the top-right corner to switch between light and dark theme
 
 ---
 
-## Daily Log Rotation
+## Daily Log Rotation (Auto-Archive)
 
-ActiveTrack automatically detects when a new day begins. This happens:
+ActiveTrack automatically archives the previous day's entries when a new day begins. This happens silently — no modal dialog, no interruption. Your previous day's data is moved into the archive and a fresh empty log starts.
+
+This is triggered:
 - When you first open the app on a new day
 - At midnight (if the app is open)
 - When you return to the tab after it's been in the background overnight
 
-When a new day is detected and you have entries from the previous day, a dialog asks whether to save yesterday's log as a CSV file before clearing. You can choose:
-- "Save & Clear" — downloads a CSV and starts fresh
-- "Just Clear" — clears the log without saving
+Archived days are browsable using the date navigation arrows in the sidebar. You can also export any archived day as CSV.
+
+### Auto-Purge (Optional)
+
+In Settings, you can configure auto-purge to automatically delete archived entries older than a specified number of days. Set to 0 (default) to keep entries forever. For example, setting it to 30 will remove any archived day older than 30 days each time a new day begins.
 
 ---
 
@@ -163,25 +177,25 @@ When a new day is detected and you have entries from the previous day, a dialog 
 
 ### CSV Download
 
-Click "📄 CSV" in the sidebar to download the current log as a CSV file. The file is named `ActiveTrack-YYYY-MM-DD.csv` and contains columns: Date, Time, Category, Details.
+Click "📄 CSV" in the sidebar to download the currently viewed day's log as a CSV file. The file is named `ActiveTrack-YYYY-MM-DD.csv` and contains columns: Date, Time, Category, Details. Navigate to a past day first to export that day's data.
 
 ### JSON Export
 
-Click "⬇ Export" to download a full JSON backup including your log entries, settings, and categories. The file is named `ActiveTrack-YYYY-MM-DD.json`.
+Click "⬇ Export" to download a full JSON backup including today's log entries, all archived days, settings, and categories. The file is named `ActiveTrack-YYYY-MM-DD.json`.
 
 ### JSON Import
 
 Click "⬆ Import" and select a previously exported JSON file. You'll be asked to choose:
-- "Merge with existing log" — combines imported entries with your current log, sorted chronologically
-- "Replace existing log" — overwrites your current log with the imported data
+- "Merge with existing log" — combines imported entries with your current log and archive, sorted chronologically
+- "Replace existing log" — overwrites your current log and archive with the imported data
 
-Import is backward compatible with older export files.
+Import is backward compatible with older export files (pre-archive format). Any imported entries from past dates are automatically moved into the archive.
 
 ---
 
 ## Clear Log
 
-Click "🗑 Clear" in the sidebar to delete all entries. A confirmation dialog appears first. After clearing, an undo banner appears at the bottom of the screen for 10 seconds — click "Undo" to restore the deleted entries.
+Click "🗑 Clear" in the sidebar to delete today's entries. This only appears when viewing today. A confirmation dialog appears first. After clearing, an undo banner appears at the bottom of the screen for 10 seconds — click "Undo" to restore the deleted entries. Archived past days are not affected.
 
 ---
 
@@ -196,10 +210,11 @@ When you go back online, the service worker checks for updates and refreshes the
 ## Data Storage
 
 All data is stored in your browser's localStorage:
-- `activityLog` — your log entries (array of date/time/category/response objects)
+- `activityLog` — today's log entries (array of date/time/category/response objects)
+- `logArchive` — archived past days (object keyed by date string, each value is an array of entries)
 - `lastCategory` — your most recent category selection
-- `config` — all settings including interval, timeout, theme, sidebar state, and categories
-- `lastActiveDate` — used for daily log rotation detection
+- `config` — all settings including interval, timeout, theme, sidebar state, categories, and purge days
+- `lastActiveDate` — used for daily auto-archive detection
 
 No data leaves your browser. Clearing browser data or switching browsers will lose your log unless you export it first.
 
@@ -219,6 +234,6 @@ No data leaves your browser. Clearing browser data or switching browsers will lo
 
 ## Version
 
-Current version: v0.47
+Current version: v0.48
 
 See `CHANGELOG.md` for full version history.

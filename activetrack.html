@@ -1,6 +1,6 @@
 <!--
-ActiveTrack v0.47
-Date: March 15, 2026
+ActiveTrack v0.48
+Date: March 18, 2026
 Creator: sefes
 
 Automated time and activity logger. Asks what you're up to at regular intervals.
@@ -956,6 +956,61 @@ body.dark-mode .custom-modal-box {
         right: 10px;
     }
 }
+
+/* Date navigation */
+.date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 6px 0;
+}
+
+.date-nav button {
+    padding: 4px 10px;
+    font-size: 16px;
+    min-height: auto;
+    margin: 0;
+    line-height: 1;
+}
+
+.date-nav .date-label {
+    font-size: 14px;
+    font-weight: bold;
+    min-width: 120px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.date-nav .date-label.viewing-past {
+    color: #2196F3;
+}
+
+body.dark-mode .date-nav .date-label.viewing-past {
+    color: #64B5F6;
+}
+
+.read-only-notice {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 6px;
+}
+
+/* Auto-purge setting */
+.settings-panel label.inline-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.settings-panel label.inline-label input[type="number"] {
+    width: 60px;
+    margin-bottom: 0;
+}
 </style>
 </head>
 <body>
@@ -1000,9 +1055,15 @@ body.dark-mode .custom-modal-box {
         <label for="quickfill-setting">Categories (emoji label, one per line):</label>
         <textarea id="quickfill-setting" rows="6"></textarea>
         
+        <label class="inline-label">
+            Auto-purge entries older than
+            <input type="number" id="purge-days-setting" min="0" max="365" value="0" style="width: 60px; margin-bottom: 0;">
+            days (0 = keep forever)
+        </label>
+        
         <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
-        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.47</div>
+        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.48</div>
     </div>
     
     <!-- Question container -->
@@ -1042,11 +1103,14 @@ let config = {
     darkMode: true,
     sidebarCollapsed: false,
     beepEnabled: false,
-    categories: [...DEFAULT_CATEGORIES]
+    categories: [...DEFAULT_CATEGORIES],
+    purgeDays: 0 // 0 = keep forever
 };
 
 // Activity log data
 let activityLog = [];
+let logArchive = {}; // { "2026-03-15": [...entries], "2026-03-14": [...] }
+let viewingDate = ''; // Which date is shown in sidebar (empty = today)
 let lastCategory = "";
 let countdownTime = config.intervalMinutes * 60;
 let isPaused = false;
@@ -1113,6 +1177,7 @@ function saveToLocalStorage() {
     saveDebounceTimeout = setTimeout(() => {
         try {
             localStorage.setItem('activityLog', JSON.stringify(activityLog));
+            localStorage.setItem('logArchive', JSON.stringify(logArchive));
             localStorage.setItem('lastCategory', lastCategory);
             localStorage.setItem('config', JSON.stringify(config));
             showSaveIndicator();
@@ -1127,6 +1192,7 @@ function saveToLocalStorageImmediate() {
     if (saveDebounceTimeout) clearTimeout(saveDebounceTimeout);
     try {
         localStorage.setItem('activityLog', JSON.stringify(activityLog));
+        localStorage.setItem('logArchive', JSON.stringify(logArchive));
         localStorage.setItem('lastCategory', lastCategory);
         localStorage.setItem('config', JSON.stringify(config));
         showSaveIndicator();
@@ -1157,42 +1223,44 @@ function checkDayRotation() {
     const lastDate = localStorage.getItem('lastActiveDate');
     
     if (lastDate && lastDate !== today && activityLog.length > 0) {
-        // Day has changed and there are entries from previous day
-        return promptDayRotation(lastDate);
-    } else {
-        localStorage.setItem('lastActiveDate', today);
-        return Promise.resolve();
-    }
-}
-
-function promptDayRotation(previousDate) {
-    const entryCount = activityLog.length;
-    const message = `You have ${entryCount} entries from ${previousDate}.\n\nSave yesterday's log before starting fresh?`;
-    
-    return showConfirm('New Day', message, 'Save & Clear', 'Just Clear').then(save => {
-        if (save) {
-            try {
-                const parts = previousDate.split('-');
-                const filename = `ActiveTrack-${parts[0]}-${parts[1]}-${parts[2]}.csv`;
-                const blob = new Blob([getCSVContent()], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.setAttribute('href', URL.createObjectURL(blob));
-                link.setAttribute('download', filename);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch (e) {
-                showAlert('Error', 'Failed to download CSV: ' + e.message);
-            }
-        }
-        
+        // Silent auto-archive: move yesterday's entries into archive
+        logArchive[lastDate] = [...activityLog];
         activityLog = [];
         lastCategory = '';
         lastSidebarLength = 0;
-        updateSidebar();
-        localStorage.setItem('lastActiveDate', getTodayString());
+        
+        // Auto-purge old entries if configured
+        if (config.purgeDays > 0) {
+            purgeOldEntries();
+        }
+        
+        localStorage.setItem('lastActiveDate', today);
         saveToLocalStorageImmediate();
+        updateSidebar();
+        console.log(`Auto-archived ${logArchive[lastDate].length} entries from ${lastDate}`);
+    } else {
+        localStorage.setItem('lastActiveDate', today);
+    }
+    return Promise.resolve();
+}
+
+function purgeOldEntries() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - config.purgeDays);
+    const cutoffStr = cutoff.getFullYear() + '-' +
+        String(cutoff.getMonth() + 1).padStart(2, '0') + '-' +
+        String(cutoff.getDate()).padStart(2, '0');
+    
+    let purged = 0;
+    Object.keys(logArchive).forEach(dateKey => {
+        if (dateKey < cutoffStr) {
+            purged += logArchive[dateKey].length;
+            delete logArchive[dateKey];
+        }
     });
+    if (purged > 0) {
+        console.log(`Auto-purged ${purged} entries older than ${config.purgeDays} days`);
+    }
 }
 
 function scheduleMidnightCheck() {
@@ -1213,10 +1281,12 @@ function scheduleMidnightCheck() {
 function loadFromLocalStorage() {
     try {
         const savedLog = localStorage.getItem('activityLog');
+        const savedArchive = localStorage.getItem('logArchive');
         const savedCategory = localStorage.getItem('lastCategory');
         const savedConfig = localStorage.getItem('config');
         
         if (savedLog) activityLog = JSON.parse(savedLog);
+        if (savedArchive) logArchive = JSON.parse(savedArchive);
         if (savedCategory) lastCategory = savedCategory;
         if (savedConfig) {
             const parsed = JSON.parse(savedConfig);
@@ -1229,6 +1299,25 @@ function loadFromLocalStorage() {
             config = { ...config, ...parsed };
             countdownTime = config.intervalMinutes * 60;
         }
+        
+        // Migrate: if activityLog has entries from past dates, move them to archive
+        if (activityLog.length > 0) {
+            const today = getTodayString();
+            const pastEntries = activityLog.filter(e => e.date !== today);
+            if (pastEntries.length > 0) {
+                // Group past entries by date
+                pastEntries.forEach(entry => {
+                    if (!logArchive[entry.date]) logArchive[entry.date] = [];
+                    logArchive[entry.date].push(entry);
+                });
+                // Keep only today's entries in activityLog
+                activityLog = activityLog.filter(e => e.date === today);
+                saveToLocalStorageImmediate();
+            }
+        }
+        
+        // Initialize viewingDate to today
+        viewingDate = getTodayString();
         
         // Apply dark mode if saved
         if (config.darkMode) {
@@ -1289,27 +1378,77 @@ function updateCountdown() {
     }
 }
 
+// --- Date navigation helpers ---
+function getEntriesForDate(dateStr) {
+    const today = getTodayString();
+    if (dateStr === today) return activityLog;
+    return logArchive[dateStr] || [];
+}
+
+function getAvailableDates() {
+    const dates = Object.keys(logArchive);
+    const today = getTodayString();
+    if (!dates.includes(today)) dates.push(today);
+    dates.sort();
+    return dates;
+}
+
+function navigateDate(direction) {
+    const dates = getAvailableDates();
+    const currentIdx = dates.indexOf(viewingDate);
+    const newIdx = currentIdx + direction;
+    if (newIdx >= 0 && newIdx < dates.length) {
+        viewingDate = dates[newIdx];
+        lastSidebarLength = 0;
+        updateSidebar();
+    }
+}
+
+function goToToday() {
+    viewingDate = getTodayString();
+    lastSidebarLength = 0;
+    updateSidebar();
+}
+
+function formatDateLabel(dateStr) {
+    const today = getTodayString();
+    if (dateStr === today) return 'Today';
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.getFullYear() + '-' +
+        String(yesterday.getMonth() + 1).padStart(2, '0') + '-' +
+        String(yesterday.getDate()).padStart(2, '0');
+    if (dateStr === yStr) return 'Yesterday';
+    // Format as Mon DD
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 // --- Update sidebar with activity log (optimized) ---
 function updateSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const totalEntries = activityLog.length;
-    
-    // Calculate daily tracked hours
     const today = getTodayString();
-    const todayEntries = activityLog.filter(e => e.date === today);
+    const isToday = viewingDate === today;
+    const entries = getEntriesForDate(viewingDate);
+    const totalEntries = entries.length;
+    const dates = getAvailableDates();
+    const canGoPrev = dates.indexOf(viewingDate) > 0;
+    const canGoNext = dates.indexOf(viewingDate) < dates.length - 1;
+    
+    // Calculate tracked hours for viewed date
     let dailyHoursText = '0h 0m';
-    if (todayEntries.length >= 2) {
-        const first = todayEntries[0].time;
-        const last = todayEntries[todayEntries.length - 1].time;
-        const [fh, fm, fs] = first.split(':').map(Number);
-        const [lh, lm, ls] = last.split(':').map(Number);
+    if (entries.length >= 2) {
+        const first = entries[0].time;
+        const last = entries[entries.length - 1].time;
+        const [fh, fm] = first.split(':').map(Number);
+        const [lh, lm] = last.split(':').map(Number);
         const diffMin = (lh * 60 + lm) - (fh * 60 + fm);
         if (diffMin > 0) {
             dailyHoursText = `${Math.floor(diffMin / 60)}h ${diffMin % 60}m`;
         }
-    } else if (todayEntries.length === 1) {
-        // Single entry — time since first entry
-        const first = todayEntries[0].time;
+    } else if (entries.length === 1 && isToday) {
+        const first = entries[0].time;
         const [fh, fm] = first.split(':').map(Number);
         const now = new Date();
         const diffMin = (now.getHours() * 60 + now.getMinutes()) - (fh * 60 + fm);
@@ -1318,12 +1457,18 @@ function updateSidebar() {
         }
     }
 
-    // Always do full rebuild to include action icons
-    sidebar.innerHTML = `
-        <h2>Activity Log</h2>
-        <div class="log-stats">
-            <strong>Total Entries:</strong> ${totalEntries} &nbsp;|&nbsp; <strong>Today:</strong> ${todayEntries.length} entries &nbsp;|&nbsp; <strong>Tracked:</strong> ${dailyHoursText}
+    // Date navigation bar
+    const dateNav = `
+        <div class="date-nav">
+            <button class="btn-secondary" onclick="navigateDate(-1)" ${canGoPrev ? '' : 'disabled'} title="Previous day">◀</button>
+            <span class="date-label ${isToday ? '' : 'viewing-past'}" onclick="goToToday()" title="${isToday ? viewingDate : 'Click to return to today'}">${formatDateLabel(viewingDate)}</span>
+            <button class="btn-secondary" onclick="navigateDate(1)" ${canGoNext ? '' : 'disabled'} title="Next day">▶</button>
         </div>
+        ${!isToday ? '<div class="read-only-notice">📖 Viewing archived day (read-only)</div>' : ''}
+    `;
+
+    // Add entry form (only for today)
+    const addEntrySection = isToday ? `
         <button class="add-btn btn-secondary btn-icon" onclick="toggleAddForm()" title="Add a manual entry">+</button>
         <div class="add-entry-form" id="add-entry-form">
             <input type="date" id="add-date" value="${getTodayString()}">
@@ -1338,10 +1483,26 @@ function updateSidebar() {
             <button class="btn-secondary" onclick="addManualEntry()">Save</button>
             <button class="btn-tertiary" onclick="toggleAddForm()">Cancel</button>
         </div>
+    ` : '';
+
+    // Action icons only for today
+    const actionIcons = (i) => isToday ? `
+        <td class="action-icons">
+            <span onclick="editEntry(${i})" title="Edit">✏️</span>
+            <span onclick="deleteEntry(${i})" title="Delete">🗑️</span>
+        </td>` : '<td></td>';
+
+    sidebar.innerHTML = `
+        <h2>Activity Log</h2>
+        ${dateNav}
+        <div class="log-stats">
+            <strong>Entries:</strong> ${totalEntries} &nbsp;|&nbsp; <strong>Tracked:</strong> ${dailyHoursText}
+            ${Object.keys(logArchive).length > 0 ? ` &nbsp;|&nbsp; <strong>Archive:</strong> ${Object.keys(logArchive).length} days` : ''}
+        </div>
+        ${addEntrySection}
         <table id="activity-table">
             <thead>
                 <tr>
-                    <th>Date</th>
                     <th>Time</th>
                     <th>Category</th>
                     <th>Details</th>
@@ -1349,28 +1510,24 @@ function updateSidebar() {
                 </tr>
             </thead>
             <tbody id="activity-tbody">
-                ${activityLog.map((entry, i) => {
+                ${entries.map((entry, i) => {
                     const cat = config.categories.find(c => c.label === entry.category);
                     const catDisplay = cat ? cat.emoji + ' ' + cat.label : (entry.category || '');
                     return `
                     <tr id="row-${i}">
-                        <td>${entry.date}</td>
                         <td>${entry.time}</td>
                         <td>${catDisplay}</td>
                         <td id="resp-${i}">${entry.response || ''}</td>
-                        <td class="action-icons">
-                            <span onclick="editEntry(${i})" title="Edit">✏️</span>
-                            <span onclick="deleteEntry(${i})" title="Delete">🗑️</span>
-                        </td>
+                        ${actionIcons(i)}
                     </tr>`;
                 }).join('')}
             </tbody>
         </table>
-        ${totalEntries === 0 ? '<div class="empty-state">No entries yet. Activity will appear here as you log it.</div>' : ''}
-        <button class="btn-secondary" onclick="downloadCSV()" title="Download log as CSV">📄 CSV</button>
-        <button class="btn-secondary" onclick="exportLog()" title="Export log as JSON">⬇ Export</button>
+        ${totalEntries === 0 ? '<div class="empty-state">No entries for this day.</div>' : ''}
+        <button class="btn-secondary" onclick="downloadCSV()" title="Download viewed day as CSV">📄 CSV</button>
+        <button class="btn-secondary" onclick="exportLog()" title="Export all data as JSON">⬇ Export</button>
         <button class="btn-secondary" onclick="importLog()" title="Import log from JSON">⬆ Import</button>
-        <button class="btn-danger" onclick="clearLog()" title="Clear all log entries">🗑 Clear</button>
+        ${isToday ? '<button class="btn-danger" onclick="clearLog()" title="Clear today\'s entries">🗑 Clear</button>' : ''}
     `;
     lastSidebarLength = totalEntries;
 }
@@ -1538,8 +1695,9 @@ function recordActivity(category, detail) {
 
 // --- Convert activity log to CSV ---
 function getCSVContent() {
+    const entries = getEntriesForDate(viewingDate);
     let csv = 'Date,Time,Category,Details\n';
-    activityLog.forEach(entry => {
+    entries.forEach(entry => {
         csv += `${entry.date},${entry.time},"${(entry.category || '').replace(/"/g, '""')}","${(entry.response || '').replace(/"/g, '""')}"\n`;
     });
     return csv;
@@ -1548,11 +1706,8 @@ function getCSVContent() {
 // --- Download activity log as CSV ---
 function downloadCSV() {
     try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const filename = `ActiveTrack-${year}-${month}-${day}.csv`;
+        const parts = viewingDate.split('-');
+        const filename = `ActiveTrack-${parts[0]}-${parts[1]}-${parts[2]}.csv`;
         const blob = new Blob([getCSVContent()], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.setAttribute('href', URL.createObjectURL(blob));
@@ -1569,11 +1724,12 @@ function downloadCSV() {
 function exportLog() {
     try {
         const data = {
-            version: '0.47',
+            version: '0.48',
             exported: new Date().toISOString(),
             config: config,
             lastCategory: lastCategory,
-            activityLog: activityLog
+            activityLog: activityLog,
+            logArchive: logArchive
         };
         const now = new Date();
         const year = now.getFullYear();
@@ -1650,26 +1806,52 @@ function executeImport(btn, action) {
     const mode = overlay.querySelector('input[name="import-mode"]:checked').value;
     
     if (mode === 'replace') {
-        activityLog = data.activityLog;
+        activityLog = data.activityLog || [];
+        logArchive = data.logArchive || {};
         lastCategory = data.lastCategory || data.lastAnswer || '';
         if (data.config) {
             config = { ...config, ...data.config };
         }
     } else {
-        // Merge and sort chronologically
-        activityLog = activityLog.concat(data.activityLog);
-        activityLog.sort((a, b) => {
-            const tA = a.date + 'T' + a.time;
-            const tB = b.date + 'T' + b.time;
-            return tA.localeCompare(tB);
+        // Merge today's entries
+        if (data.activityLog) {
+            activityLog = activityLog.concat(data.activityLog);
+            activityLog.sort((a, b) => {
+                const tA = a.date + 'T' + a.time;
+                const tB = b.date + 'T' + b.time;
+                return tA.localeCompare(tB);
+            });
+        }
+        // Merge archive
+        if (data.logArchive) {
+            Object.keys(data.logArchive).forEach(dateKey => {
+                if (!logArchive[dateKey]) {
+                    logArchive[dateKey] = data.logArchive[dateKey];
+                } else {
+                    logArchive[dateKey] = logArchive[dateKey].concat(data.logArchive[dateKey]);
+                    logArchive[dateKey].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                }
+            });
+        }
+    }
+    
+    // Migrate any past-date entries from activityLog into archive
+    const today = getTodayString();
+    const pastEntries = activityLog.filter(e => e.date !== today);
+    if (pastEntries.length > 0) {
+        pastEntries.forEach(entry => {
+            if (!logArchive[entry.date]) logArchive[entry.date] = [];
+            logArchive[entry.date].push(entry);
         });
+        activityLog = activityLog.filter(e => e.date === today);
     }
     
     lastSidebarLength = 0;
     updateSidebar();
     saveToLocalStorageImmediate();
     overlay.remove();
-    showAlert('Import Complete', `${activityLog.length} total entries.`);
+    const totalArchived = Object.values(logArchive).reduce((sum, arr) => sum + arr.length, 0);
+    showAlert('Import Complete', `${activityLog.length} entries today, ${totalArchived} archived.`);
 }
 
 // --- Edit entry inline ---
@@ -1756,7 +1938,7 @@ function addManualEntry() {
 
 // --- Clear log with soft delete and undo ---
 function clearLog() {
-    showConfirm('Clear Log', 'Clear all activity log entries?\nYou can undo within 10 seconds.', 'Clear', 'Cancel').then(ok => {
+    showConfirm('Clear Log', 'Clear today\'s activity log entries?\nYou can undo within 10 seconds.', 'Clear', 'Cancel').then(ok => {
         if (ok) {
             deletedLog = [...activityLog];
             activityLog = [];
@@ -1826,6 +2008,7 @@ function toggleSettings() {
         document.getElementById('interval-setting').value = config.intervalMinutes;
         document.getElementById('timeout-setting').value = config.timeoutSeconds;
         document.getElementById('beep-setting').checked = config.beepEnabled;
+        document.getElementById('purge-days-setting').value = config.purgeDays || 0;
         
         // Populate categories
         const categoriesText = config.categories.map(cat => `${cat.emoji} ${cat.label}`).join('\n');
@@ -1853,6 +2036,7 @@ function saveSettings() {
     config.intervalMinutes = intervalMinutes;
     config.timeoutSeconds = timeoutSeconds;
     config.beepEnabled = document.getElementById('beep-setting').checked;
+    config.purgeDays = parseInt(document.getElementById('purge-days-setting').value) || 0;
     countdownTime = intervalMinutes * 60;
     
     // Parse categories (format: "emoji label" per line)
@@ -1916,15 +2100,14 @@ document.addEventListener('keydown', function(e) {
 // --- Initialize sidebar and intervals ---
 function initializeApp() {
     loadFromLocalStorage();
+    checkDayRotation(); // Silent auto-archive if day changed
     updateSidebar();
     updateCountdown(); // Initial display
     countdownInterval = setInterval(updateCountdown, 1000);
     scheduleMidnightCheck(); // Schedule midnight rotation
     
-    // Wait for day rotation dialog (if any) before showing prompt
-    checkDayRotation().then(() => {
-        promptActivity();
-    });
+    // Show first prompt
+    promptActivity();
     
     // Setup theme toggle listener
     document.getElementById('theme-switch').addEventListener('change', function() {

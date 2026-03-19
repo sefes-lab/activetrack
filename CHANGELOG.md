@@ -1,5 +1,19 @@
 # ActiveTrack — Version History
 
+## v0.48 — March 18, 2026
+- Multi-day view: browse archived days with ◀/▶ navigation arrows in sidebar
+- Auto-archive: previous day's entries silently archived at midnight (no more Save & Clear modal)
+- Date-keyed archive storage (`logArchive` object alongside today's `activityLog`)
+- Past days shown as read-only (no edit/delete icons)
+- Today label in date nav; click to return from past day view
+- Stats bar shows archive day count
+- Table simplified: Date column removed (redundant with date nav), shows Time/Category/Details
+- Auto-purge setting: optionally delete entries older than N days (configurable in Settings, default off)
+- Migration: existing flat activityLog entries from past dates auto-moved to archive on load
+- Export/Import includes full archive data
+- CSV export downloads the currently viewed day
+- Service worker cache bumped to v7
+
 ## v0.47 — March 15, 2026
 - Replaced Quick Fill with emoji-tagged Categories (🔧 Break-Fix, 🎫 Ticket, 📋 Projects, etc.)
 - Category dropdown + optional detail text on same line in prompt dialog and manual entry
