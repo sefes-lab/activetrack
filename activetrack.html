@@ -1145,7 +1145,11 @@ function showSaveIndicator() {
 
 // --- Daily log rotation ---
 function getTodayString() {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function checkDayRotation() {
@@ -1154,9 +1158,10 @@ function checkDayRotation() {
     
     if (lastDate && lastDate !== today && activityLog.length > 0) {
         // Day has changed and there are entries from previous day
-        promptDayRotation(lastDate);
+        return promptDayRotation(lastDate);
     } else {
         localStorage.setItem('lastActiveDate', today);
+        return Promise.resolve();
     }
 }
 
@@ -1164,7 +1169,7 @@ function promptDayRotation(previousDate) {
     const entryCount = activityLog.length;
     const message = `You have ${entryCount} entries from ${previousDate}.\n\nSave yesterday's log before starting fresh?`;
     
-    showConfirm('New Day', message, 'Save & Clear', 'Just Clear').then(save => {
+    return showConfirm('New Day', message, 'Save & Clear', 'Just Clear').then(save => {
         if (save) {
             try {
                 const parts = previousDate.split('-');
@@ -1521,7 +1526,7 @@ function restoreTitleBar() {
 function recordActivity(category, detail) {
     const now = new Date();
     activityLog.push({
-        date: now.toISOString().split('T')[0],
+        date: getTodayString(),
         time: now.toTimeString().split(' ')[0],
         category: category,
         response: detail
@@ -1911,12 +1916,15 @@ document.addEventListener('keydown', function(e) {
 // --- Initialize sidebar and intervals ---
 function initializeApp() {
     loadFromLocalStorage();
-    checkDayRotation(); // Check if day has changed since last use
     updateSidebar();
     updateCountdown(); // Initial display
     countdownInterval = setInterval(updateCountdown, 1000);
     scheduleMidnightCheck(); // Schedule midnight rotation
-    promptActivity();
+    
+    // Wait for day rotation dialog (if any) before showing prompt
+    checkDayRotation().then(() => {
+        promptActivity();
+    });
     
     // Setup theme toggle listener
     document.getElementById('theme-switch').addEventListener('change', function() {
