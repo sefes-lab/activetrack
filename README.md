@@ -4,13 +4,15 @@ Automated time and activity logger. Asks what you're up to at regular intervals.
 
 ActiveTrack is a lightweight, single-file PWA that periodically prompts you to log what you're working on. Designed for personal productivity tracking with zero setup — just open and go.
 
+**Live app**: https://sefes-lab.github.io/activetrack/activetrack.html
+
 ## Features
 
-- **Periodic prompts** — Configurable interval (default 6 min) with countdown timer and audio beep
-- **Quick Fill options** — One-click logging for common activities (Break-Fix, Support, Meeting, Ticket, Projects)
-- **Activity Log sidebar** — Timestamped entries with inline edit and delete
+- **Periodic prompts** — Configurable interval (default 30 min) with countdown timer and audio beep
+- **Emoji categories** — 10 default categories (🔧 Break-Fix, 🎫 Ticket, 📋 Projects, 🤝 Meeting, etc.) with optional detail text
+- **Activity Log sidebar** — Timestamped entries with category, inline edit, and delete
 - **Manual entry** — Add entries at any time with chronological sorting
-- **Daily rotation** — Automatically prompts to save and clear at midnight
+- **Daily rotation** — Automatically prompts to save and clear at midnight (local time)
 - **Export/Import** — JSON export with full log + settings; merge or replace on import
 - **CSV download** — One-click export for spreadsheet use
 - **Light/Dark mode** — Toggle with persistent preference
@@ -28,17 +30,9 @@ Open `activetrack.html` in any modern browser. That's it.
 
 ### Install as PWA
 
-Host the files on any HTTPS server (e.g., GitHub Pages), then:
-
 - **iOS Safari**: Share → "Add to Home Screen"
 - **Android Chrome**: Menu → "Install app"
-
-### Deploy to GitHub Pages
-
-1. Create a new GitHub repository
-2. Push the contents of this folder to the `main` branch
-3. Go to Settings → Pages → Source: `main` / `/ (root)`
-4. Access at `https://YOUR_USERNAME.github.io/REPO_NAME/activetrack.html`
+- **Desktop Chrome/Edge**: Click install icon in address bar
 
 ## Files
 
@@ -49,7 +43,8 @@ Host the files on any HTTPS server (e.g., GitHub Pages), then:
 | `sw.js` | Service worker for offline caching |
 | `icon-192.png` | App icon (192x192) |
 | `icon-512.png` | App icon (512x512) |
-| `generate-icons.html` | Utility to regenerate app icons |
+| `CHANGELOG.md` | Version history |
+| `MANUAL.md` | Full user manual |
 
 ## Settings
 
@@ -58,11 +53,11 @@ Configurable via the ⚙ button:
 - Prompt interval (1–60 minutes)
 - Dialog timeout (10–120 seconds)
 - Beep notification toggle
-- Quick Fill options (editable, one per line)
+- Categories (emoji + label, editable, one per line)
 
 ## Data
 
-All data is stored in the browser's `localStorage`. Use Export/Import (JSON) to transfer between devices or browsers.
+All data is stored in the browser's `localStorage`. Use Export/Import (JSON) to transfer between devices or browsers. See [MANUAL.md](MANUAL.md) for full documentation.
 
 ## License
 
