@@ -1,6 +1,6 @@
 <!--
-ActiveTrack v0.481
-Date: March 18, 2026
+ActiveTrack v0.49
+Date: March 31, 2026
 Creator: sefes
 
 Automated time and activity logger. Asks what you're up to at regular intervals.
@@ -1144,7 +1144,7 @@ body.dark-mode .help-modal-box h3 {
         
         <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
-        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.481</div>
+        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.49</div>
     </div>
     
     <!-- Question container -->
@@ -1864,7 +1864,7 @@ function downloadCSV() {
 function exportLog() {
     try {
         const data = {
-            version: '0.48',
+            version: '0.49',
             exported: new Date().toISOString(),
             config: config,
             lastCategory: lastCategory,

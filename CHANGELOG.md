@@ -1,5 +1,13 @@
 # ActiveTrack — Version History
 
+## v0.49 — March 31, 2026
+- In-app Help modal with full feature guide (❓ Help link in header)
+- Daily reset now uses local time instead of UTC
+- Fixed modal stacking: day rotation dialog no longer overlaps with activity prompt
+- Fixed broken import/export button emojis (⬆/⬇ arrows)
+- README updated with live GitHub Pages URL and current features
+- Added .gitignore for dev utilities
+
 ## v0.48 — March 18, 2026
 - Multi-day view: browse archived days with ◀/▶ navigation arrows in sidebar
 - Auto-archive: previous day's entries silently archived at midnight (no more Save & Clear modal)

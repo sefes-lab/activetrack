@@ -1,4 +1,4 @@
-const CACHE_NAME = 'activetrack-v7';
+const CACHE_NAME = 'activetrack-v8';
 const ASSETS = [
     './activetrack.html',
     './manifest.json',
