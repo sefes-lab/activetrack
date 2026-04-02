@@ -1011,6 +1011,87 @@ body.dark-mode .date-nav .date-label.viewing-past {
     width: 60px;
     margin-bottom: 0;
 }
+
+/* Help link */
+.help-link {
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.help-link:hover {
+    color: #4CAF50;
+}
+
+body.dark-mode .help-link {
+    color: #777;
+}
+
+body.dark-mode .help-link:hover {
+    color: #66BB6A;
+}
+
+/* Help modal */
+.help-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1400;
+}
+
+.help-modal-box {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+body.dark-mode .help-modal-box {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.help-modal-box h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+}
+
+.help-modal-box h3 {
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #4CAF50;
+}
+
+body.dark-mode .help-modal-box h3 {
+    color: #66BB6A;
+}
+
+.help-modal-box table {
+    font-size: 12px;
+    margin: 8px 0;
+}
+
+.help-modal-box .help-close {
+    display: block;
+    margin: 16px auto 0;
+    padding: 8px 24px;
+}
 </style>
 </head>
 <body>
@@ -1036,7 +1117,7 @@ body.dark-mode .date-nav .date-label.viewing-past {
             <span class="save-indicator" id="save-indicator">✓ Saved</span>
         </div>
     </div>
-    <div class="intro-text">Automated time and activity logger. Asks what you're up to at regular intervals.</div>
+    <div class="intro-text">Automated time and activity logger. Asks what you're up to at regular intervals. <a href="#" class="help-link" onclick="showHelp(); return false;">❓ Help</a></div>
     
     <!-- Settings panel -->
     <div class="settings-panel" id="settings-panel">
@@ -1167,6 +1248,65 @@ function showConfirm(title, message, confirmLabel, cancelLabel) {
         { label: cancelLabel || 'Cancel', value: false, className: 'btn-tertiary' },
         { label: confirmLabel || 'OK', value: true, className: 'btn-secondary' }
     ]);
+}
+
+// --- Help modal ---
+function showHelp() {
+    const overlay = document.createElement('div');
+    overlay.classList.add('help-modal');
+    overlay.innerHTML = `
+        <div class="help-modal-box">
+            <h2>ActiveTrack — Help</h2>
+
+            <h3>How It Works</h3>
+            <p>ActiveTrack prompts you at regular intervals to record what you're working on. Select a category, optionally add details, and click Submit. Entries are logged with a timestamp in the Activity Log sidebar.</p>
+
+            <h3>Prompt Dialog</h3>
+            <p>When the countdown reaches zero, a dialog appears. Pick a category and add optional details. If you don't respond before the timeout, your last category is logged automatically.</p>
+
+            <h3>Categories</h3>
+            <table>
+                <tr><td>🔧</td><td>Break-Fix</td><td>🎫</td><td>Ticket</td></tr>
+                <tr><td>📋</td><td>Projects</td><td>🤝</td><td>Meeting</td></tr>
+                <tr><td>💬</td><td>Support</td><td>📧</td><td>Comms</td></tr>
+                <tr><td>📚</td><td>Learning</td><td>🛠️</td><td>Admin</td></tr>
+                <tr><td>☕</td><td>Break</td><td>❓</td><td>Other</td></tr>
+            </table>
+            <p>Categories are editable in Settings. Each line: emoji followed by a space and label.</p>
+
+            <h3>Activity Log</h3>
+            <p>The sidebar shows your entries in a table. Use ✏️ to edit or 🗑️ to delete an entry. Click + to add a manual entry. Use the date arrows (◀ ▶) to browse previous days. Past days are read-only.</p>
+
+            <h3>Keyboard Shortcuts</h3>
+            <table>
+                <tr><td><strong>P</strong></td><td>Pause / unpause the timer</td></tr>
+                <tr><td><strong>Enter</strong></td><td>Submit the prompt dialog</td></tr>
+                <tr><td><strong>Escape</strong></td><td>Dismiss the dialog without logging</td></tr>
+            </table>
+
+            <h3>Settings (⚙)</h3>
+            <p>Prompt interval (1–60 min), dialog timeout (10–120 sec), beep toggle, editable categories, and auto-purge for old archived days.</p>
+
+            <h3>Daily Auto-Archive</h3>
+            <p>At midnight or when you return the next day, yesterday's entries are automatically archived. Browse past days using the date navigation arrows. Archived days are kept until auto-purge removes them (configurable in Settings, default 30 days).</p>
+
+            <h3>Export / Import</h3>
+            <p>⬇ Export saves a JSON backup of all data. ⬆ Import loads a JSON or CSV file with merge or replace options. 📄 CSV downloads today's log as a spreadsheet.</p>
+
+            <h3>Dark Mode</h3>
+            <p>Toggle the switch in the top-right corner. Your preference is saved automatically.</p>
+
+            <h3>Offline / PWA</h3>
+            <p>ActiveTrack works offline after the first visit. Install it as an app from your browser menu. All data is stored locally in your browser.</p>
+
+            <button class="btn-secondary help-close" onclick="this.closest('.help-modal').remove()">Close</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    // Close on backdrop click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+    });
 }
 
 // --- localStorage functions with debouncing ---
