@@ -251,6 +251,6 @@ No data leaves your browser. Clearing browser data or switching browsers will lo
 
 ## Version
 
-Current version: v0.51
+Current version: v0.50
 
 See `CHANGELOG.md` for full version history.

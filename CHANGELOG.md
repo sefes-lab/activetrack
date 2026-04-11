@@ -2,7 +2,7 @@
 
 # ActiveTrack — Version History
 
-## v0.51 — April 11, 2026
+## v0.50 — April 11, 2026
 - System notifications via Notification API (optional, requires permission grant)
 - Notifications routed through service worker for background delivery on iOS PWA
 - Notification body is dynamic: shows last-used category (e.g. "Time to log — last: 🤝 Meeting")
