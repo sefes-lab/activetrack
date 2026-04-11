@@ -1647,12 +1647,23 @@ function sendNotification() {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     try {
-        new Notification('ActiveTrack', {
-            body: 'Time to log your activity',
-            icon: './icon-192.png',
-            tag: 'activetrack-prompt', // replaces previous notification instead of stacking
-            renotify: true
-        });
+        // Route through service worker for background delivery (iOS PWA support)
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            const cat = config.categories.find(c => c.label === lastCategory);
+            const lastCatDisplay = cat ? `${cat.emoji} ${cat.label}` : lastCategory;
+            navigator.serviceWorker.controller.postMessage({
+                type: 'show-notification',
+                lastCategory: lastCatDisplay || ''
+            });
+        } else {
+            // Fallback: direct notification (foreground only)
+            new Notification('ActiveTrack', {
+                body: 'Time to log your activity',
+                icon: './icon-192.png',
+                tag: 'activetrack-prompt',
+                renotify: true
+            });
+        }
     } catch (e) {
         console.warn('Notification failed:', e);
     }

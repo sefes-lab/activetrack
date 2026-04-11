@@ -1,4 +1,4 @@
-const CACHE_NAME = 'activetrack-v9';
+const CACHE_NAME = 'activetrack-v10';
 const ASSETS = [
     './activetrack.html',
     './manifest.json',
@@ -46,4 +46,20 @@ self.addEventListener('fetch', event => {
                 return caches.match(event.request);
             })
     );
+});
+
+// Show notification from service worker (works when app is backgrounded)
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'show-notification') {
+        const lastCategory = event.data.lastCategory || '';
+        const body = lastCategory
+            ? `Time to log — last: ${lastCategory}`
+            : 'Time to log your activity';
+        self.registration.showNotification('ActiveTrack', {
+            body: body,
+            icon: './icon-192.png',
+            tag: 'activetrack-prompt',
+            renotify: true
+        });
+    }
 });
