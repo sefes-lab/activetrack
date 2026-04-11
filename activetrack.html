@@ -279,44 +279,44 @@ body.dark-mode .save-indicator {
     padding: 4px;
     border-radius: 24px;
     background: conic-gradient(
-        #4CAF50 calc(var(--progress, 1) * 360deg),
-        rgba(76,175,80,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(76,175,80,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #4CAF50 calc((1 - var(--progress, 1)) * 360deg)
     );
     transition: background 0.3s;
 }
 
 .countdown-wrapper.paused {
     background: conic-gradient(
-        #fbc02d calc(var(--progress, 1) * 360deg),
-        rgba(251,192,45,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(251,192,45,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #fbc02d calc((1 - var(--progress, 1)) * 360deg)
     );
 }
 
 .countdown-wrapper.warning {
     background: conic-gradient(
-        #f44336 calc(var(--progress, 1) * 360deg),
-        rgba(244,67,54,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(244,67,54,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #f44336 calc((1 - var(--progress, 1)) * 360deg)
     );
 }
 
 body.dark-mode .countdown-wrapper {
     background: conic-gradient(
-        #66BB6A calc(var(--progress, 1) * 360deg),
-        rgba(102,187,106,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(102,187,106,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #66BB6A calc((1 - var(--progress, 1)) * 360deg)
     );
 }
 
 body.dark-mode .countdown-wrapper.paused {
     background: conic-gradient(
-        #fbc02d calc(var(--progress, 1) * 360deg),
-        rgba(251,192,45,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(251,192,45,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #fbc02d calc((1 - var(--progress, 1)) * 360deg)
     );
 }
 
 body.dark-mode .countdown-wrapper.warning {
     background: conic-gradient(
-        #f44336 calc(var(--progress, 1) * 360deg),
-        rgba(244,67,54,0.15) calc(var(--progress, 1) * 360deg)
+        rgba(244,67,54,0.15) calc((1 - var(--progress, 1)) * 360deg),
+        #f44336 calc((1 - var(--progress, 1)) * 360deg)
     );
 }
 
