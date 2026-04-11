@@ -1408,6 +1408,9 @@ function showHelp() {
             <h3>How It Works</h3>
             <p>ActiveTrack prompts you at regular intervals to record what you're working on. Select a category, optionally add details, and click Submit. Entries are logged with a timestamp in the Activity Log sidebar.</p>
 
+            <h3>Countdown Timer</h3>
+            <p>The pill at the top shows time until the next prompt. A colored ring around it depletes clockwise as time runs out — green when running, yellow when paused, red in the final minute. Click ⏸ or press P to pause.</p>
+
             <h3>Prompt Dialog</h3>
             <p>When the countdown reaches zero, a dialog appears. Pick a category and add optional details. If you don't respond before the timeout, your last category is logged automatically.</p>
 
@@ -1432,19 +1435,22 @@ function showHelp() {
             </table>
 
             <h3>Settings (⚙)</h3>
-            <p>Prompt interval (1–60 min), dialog timeout (10–120 sec), beep toggle, editable categories, and auto-purge for old archived days.</p>
+            <p>Prompt interval (1–60 min), dialog timeout (10–120 sec), beep toggle, system notifications toggle, editable categories, and auto-purge for old archived days.</p>
+
+            <h3>System Notifications</h3>
+            <p>Enable in Settings to receive a system notification when each prompt fires — visible even when the app is in the background. On iOS, the app must be installed as a PWA (Add to Home Screen) and running iOS 16.4+. The notification shows your last-used category, e.g. "Time to log — last: 🤝 Meeting".</p>
 
             <h3>Daily Auto-Archive</h3>
-            <p>At midnight or when you return the next day, yesterday's entries are automatically archived. Browse past days using the date navigation arrows. Archived days are kept until auto-purge removes them (configurable in Settings, default 30 days).</p>
+            <p>At midnight or when you return the next day, yesterday's entries are automatically archived. Browse past days using the date navigation arrows. Archived days are kept until auto-purge removes them (configurable in Settings, default: keep forever).</p>
 
             <h3>Export / Import</h3>
-            <p>⬇ Export saves a JSON backup of all data. ⬆ Import loads a JSON or CSV file with merge or replace options. 📄 CSV downloads today's log as a spreadsheet.</p>
+            <p>⬇ Export saves a JSON backup of all data. ⬆ Import loads a JSON or CSV file with merge or replace options. 📄 CSV downloads the currently viewed day's log.</p>
 
             <h3>Dark Mode</h3>
             <p>Toggle the switch in the top-right corner. Your preference is saved automatically.</p>
 
             <h3>Offline / PWA</h3>
-            <p>ActiveTrack works offline after the first visit. Install it as an app from your browser menu. All data is stored locally in your browser.</p>
+            <p>ActiveTrack works offline after the first visit. Install it as an app via your browser menu (Share → Add to Home Screen on iOS). All data is stored locally in your browser — nothing is sent to a server.</p>
 
             <button class="btn-secondary help-close" onclick="this.closest('.help-modal').remove()">Close</button>
         </div>

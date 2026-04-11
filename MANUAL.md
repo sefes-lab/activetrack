@@ -10,7 +10,7 @@ It works offline as a Progressive Web App (PWA) and stores all data locally in y
 
 Open `activetrack.html` in any modern browser, or visit the hosted version at https://sefes-lab.github.io/activetrack/activetrack.html.
 
-On first load, ActiveTrack will immediately show a prompt dialog asking what you're doing. Select a category, optionally add details, and click Submit. The app will continue prompting you at the configured interval (default: every 30 minutes).
+On first load, a Welcome screen introduces the app. After dismissing it, the first prompt dialog appears. Select a category, optionally add details, and click Submit. The app will continue prompting you at the configured interval (default: every 30 minutes).
 
 ### Install as PWA
 
@@ -126,9 +126,25 @@ Click the sidebar toggle button (✕ when open, ☰ when collapsed) to show or h
 
 ## Pausing the Timer
 
-Click the ⏸ button or press P to pause the countdown. The countdown pill turns yellow to indicate the paused state. Press P again or click ▶ to resume.
+Click the ⏸ button or press P to pause the countdown. The countdown pill and its progress ring turn yellow to indicate the paused state. Press P again or click ▶ to resume.
 
 While paused, no prompts will appear and the countdown stays frozen.
+
+The progress ring around the pill depletes clockwise as time counts down — green when running, yellow when paused, red in the final minute.
+
+---
+
+## System Notifications
+
+Enable system notifications in Settings to receive an alert when each prompt fires — visible even when the app is in the background or the screen is locked.
+
+The notification shows your last-used category, e.g.:
+> **ActiveTrack** — Time to log — last: 🤝 Meeting
+
+**Requirements:**
+- Enable "System notifications" in Settings and grant permission when prompted
+- On iOS: app must be installed as a PWA (Add to Home Screen) and running iOS 16.4+
+- On Android/desktop: works from any browser tab
 
 ---
 
@@ -143,6 +159,7 @@ Click the ⚙ button to open the Settings panel.
 | Prompt Interval | 30 minutes | 1–60 min | How often the prompt dialog appears |
 | Dialog Timeout | 30 seconds | 10–120 sec | How long the dialog waits before auto-submitting |
 | Enable Beep | Off | On/Off | Play a beep sound when the dialog appears and at the 10-second warning |
+| Enable Notifications | Off | On/Off | Send a system notification when the prompt fires (requires browser permission) |
 | Categories | 10 defaults | Any | Emoji-tagged activity categories, one per line |
 | Auto-purge | 0 (off) | 0–365 days | Automatically delete archived entries older than N days (0 = keep forever) |
 
@@ -234,6 +251,6 @@ No data leaves your browser. Clearing browser data or switching browsers will lo
 
 ## Version
 
-Current version: v0.48
+Current version: v0.51
 
 See `CHANGELOG.md` for full version history.
