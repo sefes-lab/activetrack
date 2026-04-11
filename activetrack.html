@@ -264,6 +264,65 @@ body.dark-mode .save-indicator {
     border: 1px solid #4CAF50;
     box-shadow: 0 2px 8px rgba(76,175,80,0.15);
     transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+    min-width: 160px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Countdown progress ring wrapper */
+.countdown-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.countdown-wrapper .countdown {
+    margin-bottom: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.progress-ring-circle {
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    stroke: #4CAF50;
+    stroke-linecap: round;
+    fill: none;
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(76,175,80,0.12);
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+body.dark-mode .progress-ring-circle {
+    stroke: #66BB6A;
+}
+
+body.dark-mode .progress-ring-bg {
+    stroke: rgba(102,187,106,0.15);
+}
+
+.countdown-wrapper.paused .progress-ring-circle {
+    stroke: #fbc02d;
+}
+
+.countdown-wrapper.warning .progress-ring-circle {
+    stroke: #f44336;
 }
 
 .countdown.paused {
@@ -1188,7 +1247,13 @@ body.dark-mode .help-modal-box h3 {
 <div class="content">
     <!-- Intro and countdown -->
     <div class="intro-countdown-wrapper">
-        <div class="countdown" id="countdown"></div>
+        <div class="countdown-wrapper" id="countdown-wrapper">
+            <svg class="progress-ring" id="progress-ring" width="0" height="0">
+                <circle class="progress-ring-bg" id="progress-ring-bg" r="0" cx="50%" cy="50%" stroke-width="3"/>
+                <circle class="progress-ring-circle" id="progress-ring-circle" r="0" cx="50%" cy="50%" stroke-width="3" stroke-dasharray="0" stroke-dashoffset="0"/>
+            </svg>
+            <div class="countdown" id="countdown"></div>
+        </div>
         <div class="button-toolbar">
             <button id="pause-btn" class="btn-secondary btn-icon pause-btn" onclick="togglePause()" title="Pause timer (P)">⏸</button>
             <button class="btn-secondary btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
@@ -1617,21 +1682,58 @@ function updateCountdown() {
     const minutes = Math.floor(countdownTime / 60);
     const seconds = countdownTime % 60;
     const countdownEl = document.getElementById("countdown");
-    countdownEl.textContent = `Next dialog: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    const wrapper = document.getElementById("countdown-wrapper");
+    countdownEl.textContent = `Next: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     
     // Add warning class if under 1 minute
     if (countdownTime < 60 && countdownTime > 0) {
         countdownEl.classList.add('warning');
+        wrapper.classList.add('warning');
     } else {
         countdownEl.classList.remove('warning');
+        wrapper.classList.remove('warning');
     }
     
+    updateProgressRing();
     countdownTime--;
     
     if (countdownTime < 0) {
         countdownTime = config.intervalMinutes * 60;
         promptActivity();
     }
+}
+
+// --- Progress ring update ---
+function updateProgressRing() {
+    const pill = document.getElementById('countdown');
+    const svg = document.getElementById('progress-ring');
+    const circle = document.getElementById('progress-ring-circle');
+    const bgCircle = document.getElementById('progress-ring-bg');
+    if (!pill || !svg || !circle) return;
+
+    const rect = pill.getBoundingClientRect();
+    const w = rect.width + 16;
+    const h = rect.height + 16;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(cx, cy) - 3;
+
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    circle.setAttribute('r', r);
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    bgCircle.setAttribute('r', r);
+    bgCircle.setAttribute('cx', cx);
+    bgCircle.setAttribute('cy', cy);
+
+    const circumference = 2 * Math.PI * r;
+    const total = config.intervalMinutes * 60;
+    const progress = countdownTime / total;
+    const offset = circumference * (1 - progress);
+
+    circle.setAttribute('stroke-dasharray', circumference);
+    circle.setAttribute('stroke-dashoffset', offset);
 }
 
 // --- Date navigation helpers ---
@@ -2318,9 +2420,11 @@ function togglePause() {
     if (isPaused) {
         countdownEl.classList.add('paused');
         countdownEl.classList.remove('warning');
+        document.getElementById('countdown-wrapper').classList.add('paused');
         clearInterval(countdownInterval);
     } else {
         countdownEl.classList.remove('paused');
+        document.getElementById('countdown-wrapper').classList.remove('paused');
         countdownInterval = setInterval(updateCountdown, 1000);
         if (countdownTime <= 0) {
             promptActivity();
