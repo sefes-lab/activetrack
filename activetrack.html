@@ -1198,7 +1198,7 @@ let config = {
 // Activity log data
 let activityLog = [];
 let logArchive = {}; // { "2026-03-15": [...entries], "2026-03-14": [...] }
-let viewingDate = ''; // Which date is shown in sidebar (empty = today)
+let viewingDate = new Date().toLocaleDateString('en-CA'); // Default to today (local date)
 let lastCategory = "";
 let countdownTime = config.intervalMinutes * 60;
 let isPaused = false;
