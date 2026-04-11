@@ -1,5 +1,13 @@
 # ActiveTrack — Version History
 
+## v0.50 — March 31, 2026
+- System notifications via Notification API (optional, requires permission)
+- Notification fires when prompt dialog opens, visible even when tab is backgrounded
+- Enable in Settings — prompts for browser permission on first enable
+- Test notification sent on successful permission grant
+- Shows permission status in Settings (granted / blocked / unsupported)
+- Works on desktop Chrome/Firefox/Edge and iOS Safari 16.4+ (PWA installed)
+
 ## v0.49 — March 31, 2026
 - In-app Help modal with full feature guide (❓ Help link in header)
 - Daily reset now uses local time instead of UTC

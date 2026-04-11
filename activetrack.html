@@ -1,5 +1,5 @@
 <!--
-ActiveTrack v0.49
+ActiveTrack v0.50
 Date: March 31, 2026
 Creator: sefes
 
@@ -1133,6 +1133,12 @@ body.dark-mode .help-modal-box h3 {
             Enable beep notification
         </label>
         
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+            <input type="checkbox" id="notifications-setting" style="width: auto; min-height: auto;">
+            Enable system notifications
+            <span id="notifications-status" style="font-size: 11px; color: #999;"></span>
+        </label>
+        
         <label for="quickfill-setting">Categories (emoji label, one per line):</label>
         <textarea id="quickfill-setting" rows="6"></textarea>
         
@@ -1144,7 +1150,7 @@ body.dark-mode .help-modal-box h3 {
         
         <button class="btn-secondary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-tertiary" onclick="toggleSettings()">Cancel</button>
-        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.49</div>
+        <div style="margin-top: 15px; font-size: 11px; color: #999;">ActiveTrack v0.50</div>
     </div>
     
     <!-- Question container -->
@@ -1184,6 +1190,7 @@ let config = {
     darkMode: true,
     sidebarCollapsed: false,
     beepEnabled: false,
+    notificationsEnabled: false,
     categories: [...DEFAULT_CATEGORIES],
     purgeDays: 0 // 0 = keep forever
 };
@@ -1494,6 +1501,37 @@ function playBeep() {
     }
 }
 
+// --- System notification ---
+function sendNotification() {
+    if (!config.notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+        new Notification('ActiveTrack', {
+            body: 'Time to log your activity',
+            icon: './icon-192.png',
+            tag: 'activetrack-prompt', // replaces previous notification instead of stacking
+            renotify: true
+        });
+    } catch (e) {
+        console.warn('Notification failed:', e);
+    }
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        return 'unsupported';
+    }
+    if (Notification.permission === 'granted') {
+        return 'granted';
+    }
+    if (Notification.permission === 'denied') {
+        return 'denied';
+    }
+    const result = await Notification.requestPermission();
+    return result;
+}
+
 // --- Update countdown to next dialog ---
 function updateCountdown() {
     if (isPaused) return;
@@ -1677,6 +1715,7 @@ function promptActivity() {
     if (isDialogOpen) return;
     
     playBeep();
+    sendNotification();
     invertTitleBar();
     isDialogOpen = true;
     
@@ -1864,7 +1903,7 @@ function downloadCSV() {
 function exportLog() {
     try {
         const data = {
-            version: '0.49',
+            version: '0.50',
             exported: new Date().toISOString(),
             config: config,
             lastCategory: lastCategory,
@@ -2220,6 +2259,19 @@ function toggleSettings() {
         document.getElementById('interval-setting').value = config.intervalMinutes;
         document.getElementById('timeout-setting').value = config.timeoutSeconds;
         document.getElementById('beep-setting').checked = config.beepEnabled;
+        document.getElementById('notifications-setting').checked = config.notificationsEnabled;
+        
+        // Show current notification permission status
+        const statusEl = document.getElementById('notifications-status');
+        if (!('Notification' in window)) {
+            statusEl.textContent = '(not supported on this browser)';
+        } else if (Notification.permission === 'denied') {
+            statusEl.textContent = '(blocked — enable in browser settings)';
+        } else if (Notification.permission === 'granted') {
+            statusEl.textContent = '(permission granted)';
+        } else {
+            statusEl.textContent = '(will prompt for permission on save)';
+        }
         document.getElementById('purge-days-setting').value = config.purgeDays || 0;
         
         // Populate categories
@@ -2248,6 +2300,32 @@ function saveSettings() {
     config.intervalMinutes = intervalMinutes;
     config.timeoutSeconds = timeoutSeconds;
     config.beepEnabled = document.getElementById('beep-setting').checked;
+    const wantsNotifications = document.getElementById('notifications-setting').checked;
+    
+    if (wantsNotifications && Notification.permission !== 'granted') {
+        requestNotificationPermission().then(result => {
+            if (result === 'granted') {
+                config.notificationsEnabled = true;
+                saveToLocalStorageImmediate();
+                // Send a test notification
+                new Notification('ActiveTrack', {
+                    body: 'Notifications enabled — you\'ll be alerted when it\'s time to log',
+                    icon: './icon-192.png'
+                });
+            } else if (result === 'denied') {
+                config.notificationsEnabled = false;
+                document.getElementById('notifications-setting').checked = false;
+                document.getElementById('notifications-status').textContent = '(blocked — enable in browser settings)';
+                saveToLocalStorageImmediate();
+            } else {
+                config.notificationsEnabled = false;
+                document.getElementById('notifications-setting').checked = false;
+                saveToLocalStorageImmediate();
+            }
+        });
+    } else {
+        config.notificationsEnabled = wantsNotifications && Notification.permission === 'granted';
+    }
     config.purgeDays = parseInt(document.getElementById('purge-days-setting').value) || 0;
     countdownTime = intervalMinutes * 60;
     
