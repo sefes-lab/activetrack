@@ -2546,7 +2546,12 @@ function toggleSidebar() {
         toggleBtn.classList.add('sidebar-visible');
     }
     
-    saveToLocalStorage();
+    // Save silently — sidebar state is a UI preference, not log data
+    try {
+        localStorage.setItem('config', JSON.stringify(config));
+    } catch (e) {
+        console.error('Failed to save config:', e);
+    }
 }
 
 // --- Global keyboard shortcuts ---
