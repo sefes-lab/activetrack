@@ -1,23 +1,20 @@
 # ActiveTrack — Version History
 
-## v0.51 — April 11, 2026
-- Background notifications via service worker (works when iOS PWA is backgrounded)
-- Notification body is dynamic: shows last-used category (e.g. "Time to log — last: 🤝 Meeting")
-- Notification fires when dialog timer starts
-- SVG progress ring replaced with conic-gradient border that hugs the pill shape
-- Progress ring depletes clockwise; turns yellow when paused, red in warning zone
-- Fixed pill width jitter (tabular-nums, no min-width)
-- First-use Welcome modal with app overview and Get Started button
-- Fixed Clear button not showing on iOS (viewingDate initialized to today at declaration)
-- Service worker cache bumped to v10
+# ActiveTrack — Version History
 
-## v0.50 — March 31, 2026
-- System notifications via Notification API (optional, requires permission)
-- Notification fires when prompt dialog opens, visible even when tab is backgrounded
-- Enable in Settings — prompts for browser permission on first enable
-- Test notification sent on successful permission grant
-- Shows permission status in Settings (granted / blocked / unsupported)
-- Works on desktop Chrome/Firefox/Edge and iOS Safari 16.4+ (PWA installed)
+## v0.51 — April 11, 2026
+- System notifications via Notification API (optional, requires permission grant)
+- Notifications routed through service worker for background delivery on iOS PWA
+- Notification body is dynamic: shows last-used category (e.g. "Time to log — last: 🤝 Meeting")
+- Notification fires when dialog timer starts; replaces previous notification instead of stacking
+- Permission status shown in Settings (granted / blocked / unsupported)
+- Progress ring around countdown pill using conic-gradient (hugs pill shape, depletes clockwise)
+- Ring turns yellow when paused, red in warning zone
+- Fixed pill width jitter (tabular-nums, consistent sizing)
+- First-use Welcome modal with app overview and Get Started button
+- Fixed Clear button not showing on iOS
+- Sidebar toggle no longer triggers "Saved" indicator
+- Service worker cache bumped to v10
 
 ## v0.49 — March 31, 2026
 - In-app Help modal with full feature guide (❓ Help link in header)
