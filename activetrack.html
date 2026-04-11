@@ -1012,6 +1012,84 @@ body.dark-mode .date-nav .date-label.viewing-past {
     margin-bottom: 0;
 }
 
+/* Welcome modal */
+.welcome-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1500;
+}
+
+.welcome-modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 28px 24px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+body.dark-mode .welcome-modal-box {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.welcome-modal-box .welcome-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.welcome-modal-box h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+}
+
+.welcome-modal-box .welcome-tagline {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+body.dark-mode .welcome-modal-box .welcome-tagline {
+    color: #aaa;
+}
+
+.welcome-steps {
+    text-align: left;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 2;
+}
+
+body.dark-mode .welcome-steps {
+    background: #3d3d3d;
+}
+
+.welcome-steps div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.welcome-modal-box .btn-primary {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    margin: 0;
+}
+
 /* Help link */
 .help-link {
     font-size: 12px;
@@ -2387,6 +2465,34 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// --- Welcome modal (shown once on first use) ---
+function showWelcome() {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.classList.add('welcome-modal');
+        overlay.innerHTML = `
+            <div class="welcome-modal-box">
+                <div class="welcome-icon">⏱️</div>
+                <h2>Welcome to ActiveTrack</h2>
+                <p class="welcome-tagline">Your personal time and activity logger. Stay aware of how you're spending your day.</p>
+                <div class="welcome-steps">
+                    <div>⏰ <span>A prompt appears at regular intervals</span></div>
+                    <div>🏷️ <span>Pick a category for what you're doing</span></div>
+                    <div>📋 <span>Your log builds up in the sidebar</span></div>
+                    <div>📤 <span>Export anytime as CSV or JSON</span></div>
+                </div>
+                <button class="btn-primary" id="welcome-start-btn">Get Started</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#welcome-start-btn').onclick = () => {
+            overlay.remove();
+            localStorage.setItem('welcomeSeen', '1');
+            resolve();
+        };
+    });
+}
+
 // --- Initialize sidebar and intervals ---
 function initializeApp() {
     loadFromLocalStorage();
@@ -2396,8 +2502,15 @@ function initializeApp() {
     countdownInterval = setInterval(updateCountdown, 1000);
     scheduleMidnightCheck(); // Schedule midnight rotation
     
-    // Show first prompt
-    promptActivity();
+    // Show welcome on first ever use, then show first prompt
+    const isFirstUse = !localStorage.getItem('welcomeSeen');
+    const startPrompt = () => promptActivity();
+    
+    if (isFirstUse) {
+        showWelcome().then(startPrompt);
+    } else {
+        startPrompt();
+    }
     
     // Setup theme toggle listener
     document.getElementById('theme-switch').addEventListener('change', function() {
