@@ -1,5 +1,16 @@
 # ActiveTrack — Version History
 
+## v0.51 — April 11, 2026
+- Background notifications via service worker (works when iOS PWA is backgrounded)
+- Notification body is dynamic: shows last-used category (e.g. "Time to log — last: 🤝 Meeting")
+- Notification fires when dialog timer starts
+- SVG progress ring replaced with conic-gradient border that hugs the pill shape
+- Progress ring depletes clockwise; turns yellow when paused, red in warning zone
+- Fixed pill width jitter (tabular-nums, no min-width)
+- First-use Welcome modal with app overview and Get Started button
+- Fixed Clear button not showing on iOS (viewingDate initialized to today at declaration)
+- Service worker cache bumped to v10
+
 ## v0.50 — March 31, 2026
 - System notifications via Notification API (optional, requires permission)
 - Notification fires when prompt dialog opens, visible even when tab is backgrounded
