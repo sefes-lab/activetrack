@@ -1,4 +1,4 @@
-const CACHE_NAME = 'activetrack-v10';
+const CACHE_NAME = 'activetrack-v11';
 const ASSETS = [
     './activetrack.html',
     './manifest.json',
@@ -55,7 +55,7 @@ self.addEventListener('message', event => {
         const body = lastCategory
             ? `Time to log — last: ${lastCategory}`
             : 'Time to log your activity';
-        self.registration.showNotification('ActiveTrack', {
+        self.registration.showNotification('Ready for next activity?', {
             body: body,
             icon: './icon-192.png',
             tag: 'activetrack-prompt',

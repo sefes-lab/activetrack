@@ -1663,7 +1663,7 @@ function sendNotification() {
             });
         } else {
             // Fallback: direct notification (foreground only)
-            new Notification('ActiveTrack', {
+            new Notification('Ready for next activity?', {
                 body: 'Time to log your activity',
                 icon: './icon-192.png',
                 tag: 'activetrack-prompt',
